@@ -6,9 +6,18 @@ from fastapi.requests import Request
 
 logger = setup_logger()
 
-app = FastAPI()
+app = FastAPI(title="AI Financial Copilot")
 
 app.include_router(copilot.router)
+
+@app.get("/")
+def root():
+    return {
+        "message": "AI Financial Copilot API",
+        "status": "running",
+        "docs": "/docs"
+    }
+
 
 @app.on_event("startup")
 def startup_event():
