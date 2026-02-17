@@ -3,6 +3,10 @@ from app.api import copilot
 from app.core.logger import setup_logger
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
+from app.database import engine
+from sqlalchemy import text
+
+
 
 logger = setup_logger()
 
@@ -42,3 +46,9 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": "An unexpected error occurred."
         }
     )
+
+@app.get("/db-test")
+def test_db():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT 1"))
+        return {"database": "connected"}
