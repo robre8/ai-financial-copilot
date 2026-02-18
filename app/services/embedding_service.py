@@ -1,4 +1,5 @@
 import logging
+import gc
 from huggingface_hub import InferenceClient
 from app.core.config import settings
 
@@ -17,7 +18,6 @@ class EmbeddingService:
     def embed_text(text: str) -> list:
         """Generate embeddings using Huggingface Inference API"""
         try:
-            logger.info(f"Generating embedding for text: {text[:50]}...")
             client = InferenceClient(api_key=HF_API_KEY)
             
             embedding = client.get_sentence_embeddings(
@@ -25,7 +25,10 @@ class EmbeddingService:
                 inputs=text
             )
             
-            logger.info(f"Embedding generated: dimension {len(embedding)}")
+            # 🔹 Memory cleanup
+            del client
+            gc.collect()
+            
             return embedding
         except Exception as e:
             logger.error(f"Error generating embedding: {repr(e)}")

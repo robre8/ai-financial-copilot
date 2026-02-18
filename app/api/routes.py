@@ -1,6 +1,7 @@
 import os
 import traceback
 import requests
+import gc
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.rag_service import RAGService
 from app.schemas.rag_schema import QuestionRequest, QuestionResponse, DebugPromptRequest
@@ -41,12 +42,11 @@ async def upload_pdf(file: UploadFile = File(...)):
     check_api_key()
     
     file_location = f"temp_{file.filename}"
-    logger.info(f"Starting PDF upload: {file.filename}")
+    logger.info(f"Processing PDF: {file.filename}")
 
     try:
         # Validar que es un PDF
         if not file.filename.lower().endswith('.pdf'):
-            logger.warning(f"Invalid file type: {file.filename}")
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
         # Guardar archivo temporalmente
@@ -55,32 +55,31 @@ async def upload_pdf(file: UploadFile = File(...)):
             if not content:
                 raise HTTPException(status_code=400, detail="File is empty")
             f.write(content)
+            del content  # Clear memory immediately
         
-        logger.info(f"File saved: {file_location}")
-
         # Procesar documento
-        logger.info("Processing document...")
         RAGService.process_document(file_location)
-        logger.info("Document processing complete")
 
         # Guardar vector store (crítico)
-        logger.info("Saving vector store...")
         RAGService.vector_store.save()
-        logger.info("Vector store saved successfully")
+        
+        # 🔹 Explicit memory cleanup
+        gc.collect()
 
-        logger.info(f"PDF indexed successfully: {file.filename}")
+        logger.info(f"PDF indexed: {file.filename}")
         return {"message": "PDF indexed successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing PDF: {str(e)}", exc_info=True)
+        logger.error(f"Error processing PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
 
     finally:
+        # 🔹 Always cleanup temp file
         if os.path.exists(file_location):
             os.remove(file_location)
-            logger.info(f"Temp file deleted: {file_location}")
+        gc.collect()
 
 
 @router.post("/ask", response_model=QuestionResponse)
@@ -92,15 +91,17 @@ def ask_question(request: QuestionRequest):
         if not request.question or len(request.question.strip()) == 0:
             raise HTTPException(status_code=400, detail="Question cannot be empty")
         
-        logger.info(f"Processing question: {request.question[:50]}...")
         answer = RAGService.ask(request.question)
-        logger.info("Question answered successfully")
+        
+        # 🔹 Cleanup memory after inference
+        gc.collect()
+        
         return QuestionResponse(answer=answer)
     
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error answering question: {str(e)}", exc_info=True)
+        logger.error(f"Error answering question: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
 
 
