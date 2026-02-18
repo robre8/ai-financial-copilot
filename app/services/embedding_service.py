@@ -28,7 +28,13 @@ class EmbeddingService:
             if isinstance(response, np.ndarray):
                 response = response.tolist()
             
-            # Response should be a list of floats (embedding vector)
+            # Handle list format from Huggingface
+            if isinstance(response, list):
+                # If it's a list of lists (wrapped response), extract the first embedding
+                if len(response) > 0 and isinstance(response[0], (list, tuple)):
+                    return response[0]
+                # If it's a simple list, return as-is
+                return response
             
             raise ValueError(f"Unexpected embedding response format: {type(response)}")
             
