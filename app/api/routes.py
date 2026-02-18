@@ -1,11 +1,12 @@
 import os
+import traceback
+import requests
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.rag_service import RAGService
 from app.schemas.rag_schema import QuestionRequest, QuestionResponse, DebugPromptRequest
 from app.core.logger import setup_logger
 from app.core.config import settings
 from app.services.llm_service import LLMService
-import traceback
 
 router = APIRouter()
 logger = setup_logger()
@@ -109,29 +110,39 @@ def debug_llm_raw(request: DebugPromptRequest):
     check_api_key()
 
     try:
-        logger.info("Debug LLM raw: calling HF API directly with prompt: %s", request.prompt[:50])
+        from app.services.llm_service import HF_API_BASE, HF_HEADERS, HF_MODELS
         
-        from app.services.llm_service import HF_API_URL, HF_HEADERS
-        import requests
+        logger.info("Debug LLM raw: trying models with prompt: %s", request.prompt[:50])
         
-        payload = {"inputs": request.prompt}
-        response = requests.post(
-            HF_API_URL,
-            headers=HF_HEADERS,
-            json=payload,
-            timeout=30
-        )
+        for model in HF_MODELS:
+            url = f"{HF_API_BASE}/{model}"
+            logger.info("Trying model: %s at %s", model, url)
+            
+            try:
+                payload = {"inputs": request.prompt}
+                response = requests.post(
+                    url,
+                    headers=HF_HEADERS,
+                    json=payload,
+                    timeout=30
+                )
+                
+                logger.info("Model %s returned status: %d", model, response.status_code)
+                
+                if response.status_code == 200:
+                    raw = response.json()
+                    return {"raw": raw, "type": str(type(raw)), "status": response.status_code, "model": model}
+                else:
+                    logger.warning("Model %s failed with status %d, trying next", model, response.status_code)
+                    continue
+                    
+            except Exception as model_err:
+                logger.warning("Model %s exception: %s", model, repr(model_err))
+                continue
         
-        logger.info("HF API status code: %d", response.status_code)
-        response.raise_for_status()
-        
-        raw = response.json()
-        logger.info("Raw response type: %s", type(raw))
-        logger.info("Debug endpoint returning raw response")
-        
-        return {"raw": raw, "type": str(type(raw)), "status": response.status_code}
+        raise RuntimeError("All models exhausted without success")
 
     except Exception as e:
         tb = traceback.format_exc()
-        logger.error("Debug LLM raw failed with exception: %s\nTraceback:\n%s", repr(e), tb)
-        raise HTTPException(status_code=500, detail=f"Debug failed: {repr(e)} | {tb}")
+        logger.error("Debug LLM raw failed: %s", tb)
+        raise HTTPException(status_code=500, detail=f"Debug failed: {repr(e)}")

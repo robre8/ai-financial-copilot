@@ -3,6 +3,9 @@ from app.services.vector_store_service import VectorStoreService
 from app.services.llm_service import LLMService
 from app.services.pdf_service import PDFService
 from app.utils.text_splitter import TextSplitter
+from app.core.logger import setup_logger
+
+logger = setup_logger()
 
 
 class RAGService:
@@ -41,4 +44,9 @@ If the answer is not in the context, say:
 "I don't have enough information in the provided documents."
 """
 
-        return LLMService.generate(prompt)
+        try:
+            return LLMService.generate(prompt)
+        except Exception as e:
+            logger.warning("LLM generation failed, returning raw context: %s", repr(e))
+            # Fallback: return extracted context directly
+            return f"Based on the indexed documents, here is relevant information:\n\n{context}"
