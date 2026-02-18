@@ -26,6 +26,26 @@ class LLMService:
                 return_full_text=False,
             )
 
+            # If the HF client returns a generator/iterator, consume safely
+            try:
+                if hasattr(response, "__iter__") and not isinstance(response, (str, list, dict)):
+                    # Collect up to a few items to avoid streaming indefinitely
+                    collected = []
+                    for i, item in enumerate(response):
+                        collected.append(item)
+                        if i >= 4:
+                            break
+
+                    if len(collected) == 0:
+                        raise StopIteration()
+                    response = collected[0] if len(collected) == 1 else collected
+            except StopIteration:
+                logger.error("LLM client returned no data (StopIteration)")
+                raise RuntimeError("LLM client returned no data")
+            except Exception:
+                # Non-fatal: fall back to using the raw response
+                pass
+
             # Log raw response for debugging
             try:
                 logger.info("LLM raw response type=%s", type(response))
