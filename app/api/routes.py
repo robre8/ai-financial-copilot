@@ -3,9 +3,19 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.rag_service import RAGService
 from app.schemas.rag_schema import QuestionRequest, QuestionResponse
 from app.core.logger import setup_logger
+from app.core.config import settings
 
 router = APIRouter()
 logger = setup_logger()
+
+
+def check_api_key():
+    """Ensure API key is configured"""
+    try:
+        settings.validate()
+    except ValueError as e:
+        logger.error(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/")
@@ -24,6 +34,9 @@ def root():
 
 @router.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
+    # Check API key first
+    check_api_key()
+    
     file_location = f"temp_{file.filename}"
     logger.info(f"Starting PDF upload: {file.filename}")
 
@@ -69,6 +82,9 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 @router.post("/ask", response_model=QuestionResponse)
 def ask_question(request: QuestionRequest):
+    # Check API key first
+    check_api_key()
+    
     try:
         if not request.question or len(request.question.strip()) == 0:
             raise HTTPException(status_code=400, detail="Question cannot be empty")

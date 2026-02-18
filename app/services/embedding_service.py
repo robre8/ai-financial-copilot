@@ -1,37 +1,33 @@
-import requests
+from huggingface_hub import InferenceClient
 from app.core.config import settings
-
-
-HF_EMBED_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
-
-headers = {
-    "Authorization": f"Bearer {settings.HF_API_KEY}"
-}
 
 
 class EmbeddingService:
 
     # 🔹 Dimensión del modelo
     dimension = 384
+    
+    model_name = "sentence-transformers/all-MiniLM-L6-v2"
+    
+    client = InferenceClient(
+        api_key=settings.HF_API_KEY,
+    )
 
     @staticmethod
     def embed_text(text: str):
-        payload = {"inputs": text}
-
-        response = requests.post(
-            HF_EMBED_URL,
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-
-        response.raise_for_status()
-        data = response.json()
-
-        # 🔹 HF devuelve lista directamente
-        if isinstance(data, list):
-            if isinstance(data[0], list):
-                return data[0]
-            return data
-
-        raise ValueError("Unexpected embedding response format")
+        """Generate embeddings using Huggingface Inference API"""
+        try:
+            # Use the official InferenceClient for feature extraction
+            response = EmbeddingService.client.feature_extraction(
+                text,
+                model=EmbeddingService.model_name,
+            )
+            
+            # Response is already a list of floats (embedding vector)
+            if isinstance(response, list):
+                return response
+            
+            raise ValueError(f"Unexpected embedding response format: {type(response)}")
+            
+        except Exception as e:
+            raise RuntimeError(f"Error generating embedding: {str(e)}")
