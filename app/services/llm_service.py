@@ -1,6 +1,6 @@
-import requests
 import gc
 import time
+from huggingface_hub import InferenceClient
 from app.core.config import settings
 from app.core.logger import setup_logger
 import traceback
@@ -8,13 +8,12 @@ import traceback
 logger = setup_logger()
 
 # 🔹 Huggingface API configuration
-HF_API_BASE = "https://api-inference.huggingface.co/pipeline"
-HF_HEADERS = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
+HF_API_KEY = settings.HF_TOKEN
 HF_MODELS = [
-    ("google/flan-t5-small", "text2text-generation"),
-    ("gpt2", "text-generation"),
-    ("facebook/opt-350m", "text-generation"),
-    ("distilgpt2", "text-generation"),
+    "google/flan-t5-small",
+    "gpt2",
+    "facebook/opt-350m",
+    "distilgpt2",
 ]
 
 
@@ -22,72 +21,41 @@ class LLMService:
 
     @staticmethod
     def generate(prompt: str) -> str:
-        """Generate text using Huggingface Inference API"""
+        """Generate text using Huggingface Inference API via InferenceClient"""
         try:
-            for model_info in HF_MODELS:
+            client = InferenceClient(token=HF_API_KEY)
+            
+            for model_name in HF_MODELS:
                 try:
-                    model_name, task_type = model_info
-                    url = f"{HF_API_BASE}/{task_type}/{model_name}"
+                    logger.info(f"Trying model: {model_name}")
                     
-                    payload = {"inputs": prompt}
-                    response = requests.post(
-                        url,
-                        headers=HF_HEADERS,
-                        json=payload,
-                        timeout=45  # Increased timeout for large models
-                    )
-                    
-                    # 🔹 Enhanced logging
-                    logger.info(f"Model {model_name} returned status: {response.status_code}")
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        
+                    # 🔹 Use text_generation for GPT models
+                    if "gpt" in model_name.lower() or "opt" in model_name.lower():
+                        result = client.text_generation(
+                            prompt=prompt,
+                            model=model_name,
+                            max_new_tokens=200,
+                            temperature=0.7
+                        )
+                        logger.info(f"✅ Success with model: {model_name}")
                         # 🔹 Memory cleanup
-                        del response
                         gc.collect()
-                        
-                        if isinstance(result, list) and len(result) > 0:
-                            if isinstance(result[0], dict):
-                                # Check for common response keys from different models
-                                for key in ['generated_text', 'summary_text', 'translation_text']:
-                                    if key in result[0]:
-                                        logger.info(f"✅ Success with model: {model_name}")
-                                        return result[0][key].strip()
-                        return str(result)
+                        return result.strip()
                     
-                    elif response.status_code == 503:
-                        # Model is loading - wait and retry once
-                        error_data = response.json()
-                        estimated_time = error_data.get('estimated_time', 20)
-                        logger.warning(f"Model {model_name} loading... waiting {estimated_time}s")
-                        
-                        if estimated_time < 30:
-                            time.sleep(min(estimated_time + 2, 30))
-                            # Retry
-                            response = requests.post(url, headers=HF_HEADERS, json=payload, timeout=45)
-                            if response.status_code == 200:
-                                result = response.json()
-                                if isinstance(result, list) and len(result) > 0:
-                                    if isinstance(result[0], dict):
-                                        # Check for common response keys from different models
-                                        for key in ['generated_text', 'summary_text', 'translation_text']:
-                                            if key in result[0]:
-                                                return result[0][key].strip()
-                                return str(result)
-                        continue
-                    
+                    # 🔹 Use text2text_generation for T5 models
                     else:
-                        # Log error details
-                        try:
-                            error_msg = response.json()
-                            logger.warning(f"Model {model_name} failed: {response.status_code} - {error_msg}")
-                        except Exception:
-                            logger.warning(f"Model {model_name} failed: {response.status_code} - {response.text[:200]}")
-                        continue
-                        
+                        result = client.text2text_generation(
+                            text=prompt,
+                            model=model_name,
+                            max_length=200
+                        )
+                        logger.info(f"✅ Success with model: {model_name}")
+                        # 🔹 Memory cleanup
+                        gc.collect()
+                        return result.strip()
+                    
                 except Exception as model_err:
-                    logger.warning(f"Model exception: {repr(model_err)}")
+                    logger.warning(f"Model {model_name} failed: {repr(model_err)}")
                     continue
             
             raise RuntimeError("All models exhausted without success")
