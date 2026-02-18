@@ -28,6 +28,18 @@ wheels/
 .env.local
 .env.*.local
 
+# Local test files
+test_*.pdf
+temp_*.pdf
+*.index
+texts.json
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
 # IDE
 .vscode/
 .idea/
