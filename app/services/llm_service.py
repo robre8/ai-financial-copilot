@@ -21,7 +21,7 @@ class LLMService:
             logger.info("Calling HF API with %s", HF_MODEL)
             logger.info("Prompt preview: %s...", prompt[:100])
             
-            url = f"{HF_API_URL}/{HF_MODEL}"
+            url = f"{HF_API_URL}/gpt2/pipeline/text-generation"
             headers = {
                 "Authorization": f"Bearer {settings.HF_TOKEN}",
             }
