@@ -18,11 +18,12 @@ class EmbeddingService:
     def embed_text(text: str) -> list:
         """Generate embeddings using Huggingface Inference API"""
         try:
-            client = InferenceClient(api_key=HF_API_KEY)
+            # 🔹 Correct parameter name is 'token', not 'api_key'
+            client = InferenceClient(token=HF_API_KEY)
             
-            embedding = client.get_sentence_embeddings(
-                model=HF_MODEL,
-                inputs=text
+            embedding = client.feature_extraction(
+                text=text,
+                model=HF_MODEL
             )
             
             # 🔹 Memory cleanup
