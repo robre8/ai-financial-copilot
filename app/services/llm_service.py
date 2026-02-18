@@ -8,7 +8,7 @@ logger = setup_logger()
 # 🔹 Model configuration
 # Using gpt2 - public model always available in HF Inference API
 HF_MODEL = "gpt2"
-HF_API_URL = "https://router.huggingface.co/models"
+HF_API_URL = "https://router.huggingface.co/hf-inference/models"
 
 
 class LLMService:

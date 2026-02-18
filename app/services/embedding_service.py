@@ -10,7 +10,9 @@ class EmbeddingService:
     
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
     
+    # 🔹 Use official HF provider for optimal routing
     client = InferenceClient(
+        provider="hf-inference",
         api_key=settings.HF_TOKEN,
     )
 
