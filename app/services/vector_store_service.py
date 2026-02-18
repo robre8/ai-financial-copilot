@@ -8,7 +8,7 @@ from app.services.embedding_service import EmbeddingService
 
 class VectorStoreService:
     # 🔹 Memory optimization: limit max vectors
-    MAX_VECTORS = 5000  # Approx 100MB with 768-dim embeddings
+    MAX_VECTORS = 5000  # Approx 75MB with 384-dim embeddings
 
     def __init__(self):
         # 🔹 Tomamos dimensión del modelo de embeddings

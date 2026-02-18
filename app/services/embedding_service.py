@@ -1,5 +1,6 @@
 import logging
 import gc
+import numpy as np
 from huggingface_hub import InferenceClient
 from app.core.config import settings
 
@@ -25,6 +26,21 @@ class EmbeddingService:
                 text=text,
                 model=HF_MODEL
             )
+            
+            # 🔹 Normalize to 1D array: feature_extraction can return nested arrays
+            embedding = np.array(embedding)
+            if embedding.ndim > 1:
+                # If 2D (e.g., [[0.1, 0.2, ...]]), take mean pooling or first vector
+                embedding = embedding.mean(axis=0)
+            
+            embedding = embedding.flatten().tolist()
+            
+            # 🔹 Validate dimension
+            if len(embedding) != EmbeddingService.dimension:
+                raise ValueError(
+                    f"Expected {EmbeddingService.dimension}-dim embedding, "
+                    f"got {len(embedding)}-dim"
+                )
             
             # 🔹 Memory cleanup
             del client
