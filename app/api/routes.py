@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.rag_service import RAGService
-from app.schemas.rag_schema import QuestionRequest, QuestionResponse
+from app.schemas.rag_schema import QuestionRequest, QuestionResponse, DebugPromptRequest
 from app.core.logger import setup_logger
 from app.core.config import settings
 from app.services.llm_service import LLMService
@@ -104,17 +104,13 @@ def ask_question(request: QuestionRequest):
 
 
 @router.post("/debug/llm-raw")
-def debug_llm_raw(payload: dict):
+def debug_llm_raw(request: DebugPromptRequest):
     """Return raw LLM client response for debugging. Use only for diagnostics."""
     check_api_key()
 
-    prompt = payload.get("prompt") if isinstance(payload, dict) else None
-    if not prompt or not isinstance(prompt, str):
-        raise HTTPException(status_code=400, detail="Missing or invalid 'prompt' in body")
-
     try:
         raw = LLMService.client.text_generation(
-            prompt,
+            request.prompt,
             model=LLMService.model_name,
             max_new_tokens=300,
             temperature=0.3,

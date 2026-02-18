@@ -7,3 +7,6 @@ class QuestionRequest(BaseModel):
 
 class QuestionResponse(BaseModel):
     answer: str
+
+class DebugPromptRequest(BaseModel):
+    prompt: str
