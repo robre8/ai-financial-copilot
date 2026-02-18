@@ -27,7 +27,7 @@ pip install -r requirements.txt
 2. **Configure Environment**
 ```bash
 cp .env.example .env
-# Edit .env and add your HF_API_KEY
+# Edit .env and add your HF_TOKEN
 ```
 
 3. **Run Server**
@@ -41,7 +41,7 @@ Visit `http://localhost:8000/docs` for API documentation.
 
 ```bash
 docker build -t financial-copilot .
-docker run -e HF_API_KEY=your_key_here -p 8000:8000 financial-copilot
+docker run -e HF_TOKEN=your_key_here -p 8000:8000 financial-copilot
 ```
 
 ## API Endpoints

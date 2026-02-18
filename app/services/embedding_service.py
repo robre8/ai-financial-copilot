@@ -11,7 +11,7 @@ class EmbeddingService:
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
     
     client = InferenceClient(
-        api_key=settings.HF_API_KEY,
+        api_key=settings.HF_TOKEN,
     )
 
     @staticmethod

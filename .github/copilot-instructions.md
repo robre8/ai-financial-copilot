@@ -12,7 +12,7 @@ This is a **RAG (Retrieval-Augmented Generation) system** for financial document
 - **[app/services/rag_service.py](app/services/rag_service.py)**: Orchestrates the RAG pipeline - no imports needed, it coordinates all steps
 - **[app/services/vector_store_service.py](app/services/vector_store_service.py)**: FAISS index with persistent JSON storage (manual `save()` required)
 - **[app/services/embedding_service.py](app/services/embedding_service.py)**: Huggingface sentence-transformers (all-MiniLM-L6-v2, 384 dimensions)
-- **[app/services/llm_service.py](app/services/llm_service.py)**: DistilGPT-2 via Huggingface Inference API
+- **[app/services/llm_service.py](app/services/llm_service.py)**: DistilGPT-2 via Huggingface InferenceClient
 - **[app/services/pdf_service.py](app/services/pdf_service.py)**: PyPDF text extraction per page
 - **[app/utils/text_splitter.py](app/utils/text_splitter.py)**: LangChain text chunking
 
@@ -28,7 +28,7 @@ The system uses **in-context prompting** in [rag_service.py](app/services/rag_se
 All vector operations use **384-dimensional embeddings** (all-MiniLM-L6-v2 model). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
 
 ### Huggingface API Configuration
-Both embedding and LLM services use the same `HF_API_KEY` from `.env` (via [config.py](app/core/config.py)). Endpoints are hardcoded—adding new models requires updating service classes directly. Temperature set to 0.3 for deterministic financial responses.
+Both embedding and LLM services use the **InferenceClient** library which handles authentication automatically via the `HF_TOKEN` environment variable (from `.env`). The InferenceClient routes requests through Huggingface's optimal infrastructure without needing manual URL handling.
 
 ### Stateless vs Stateful Services
 - **RAGService.vector_store** is a **class variable singleton** (shared across requests)
@@ -69,6 +69,6 @@ Check [test/test_rag.py](test/test_rag.py) for test patterns. Key distinction: e
 
 ## Environment Setup
 
-- **Required**: `.env` file with `HF_API_KEY` (Huggingface API key)
+- **Required**: `.env` file with `HF_TOKEN` (Huggingface API token)
 - **Database**: SQLite ([app/models.py](app/models.py) defines schema, not currently used in routes)
 - **Embeddings**: 384-dim vectors stored in `vector.index` + `texts.json` in working directory
