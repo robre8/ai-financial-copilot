@@ -1,5 +1,6 @@
 from huggingface_hub import InferenceClient
 from app.core.config import settings
+import numpy as np
 
 
 class EmbeddingService:
@@ -23,9 +24,11 @@ class EmbeddingService:
                 model=EmbeddingService.model_name,
             )
             
-            # Response is already a list of floats (embedding vector)
-            if isinstance(response, list):
-                return response
+            # Convert numpy array to list if needed
+            if isinstance(response, np.ndarray):
+                response = response.tolist()
+            
+            # Response should be a list of floats (embedding vector)
             
             raise ValueError(f"Unexpected embedding response format: {type(response)}")
             
