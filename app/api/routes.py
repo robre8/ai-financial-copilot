@@ -4,6 +4,8 @@ from app.services.rag_service import RAGService
 from app.schemas.rag_schema import QuestionRequest, QuestionResponse
 from app.core.logger import setup_logger
 from app.core.config import settings
+from app.services.llm_service import LLMService
+import traceback
 
 router = APIRouter()
 logger = setup_logger()
@@ -99,3 +101,37 @@ def ask_question(request: QuestionRequest):
     except Exception as e:
         logger.error(f"Error answering question: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
+
+
+@router.post("/debug/llm-raw")
+def debug_llm_raw(payload: dict):
+    """Return raw LLM client response for debugging. Use only for diagnostics."""
+    check_api_key()
+
+    prompt = payload.get("prompt") if isinstance(payload, dict) else None
+    if not prompt or not isinstance(prompt, str):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'prompt' in body")
+
+    try:
+        raw = LLMService.client.text_generation(
+            prompt,
+            model=LLMService.model_name,
+            max_new_tokens=300,
+            temperature=0.3,
+            return_full_text=False,
+        )
+
+        # Materialize iterators/generators
+        try:
+            if hasattr(raw, "__iter__") and not isinstance(raw, (str, list, dict)):
+                raw = list(raw)
+        except Exception:
+            # fall back to repr if cannot materialize
+            raw = repr(raw)
+
+        return {"raw": raw}
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error("Debug LLM raw failed: %s", tb)
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
