@@ -13,7 +13,7 @@ class LLMService:
     )
 
     # Use a model that's available in free tier
-    model_name = "google/flan-t5-large"
+    model_name = "gpt2"
 
     @staticmethod
     def generate(prompt: str) -> str:

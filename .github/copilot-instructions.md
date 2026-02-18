@@ -12,7 +12,7 @@ This is a **RAG (Retrieval-Augmented Generation) system** for financial document
 - **[app/services/rag_service.py](app/services/rag_service.py)**: Orchestrates the RAG pipeline - no imports needed, it coordinates all steps
 - **[app/services/vector_store_service.py](app/services/vector_store_service.py)**: FAISS index with persistent JSON storage (manual `save()` required)
 - **[app/services/embedding_service.py](app/services/embedding_service.py)**: Huggingface sentence-transformers (all-MiniLM-L6-v2, 384 dimensions)
-- **[app/services/llm_service.py](app/services/llm_service.py)**: Google Flan-T5 via Huggingface Inference API
+- **[app/services/llm_service.py](app/services/llm_service.py)**: GPT-2 via Huggingface Inference API
 - **[app/services/pdf_service.py](app/services/pdf_service.py)**: PyPDF text extraction per page
 - **[app/utils/text_splitter.py](app/utils/text_splitter.py)**: LangChain text chunking
 
