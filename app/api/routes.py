@@ -109,31 +109,27 @@ def debug_llm_raw(request: DebugPromptRequest):
     check_api_key()
 
     try:
-        logger.info("Debug LLM raw: calling text_generation with prompt: %s", request.prompt[:50])
+        logger.info("Debug LLM raw: calling HF API directly with prompt: %s", request.prompt[:50])
         
-        raw = LLMService.client.text_generation(
-            request.prompt,
-            model=LLMService.model_name,
-            max_new_tokens=300,
-            temperature=0.3,
-            return_full_text=False,
+        from app.services.llm_service import HF_API_URL, HF_HEADERS
+        import requests
+        
+        payload = {"inputs": request.prompt}
+        response = requests.post(
+            HF_API_URL,
+            headers=HF_HEADERS,
+            json=payload,
+            timeout=30
         )
         
+        logger.info("HF API status code: %d", response.status_code)
+        response.raise_for_status()
+        
+        raw = response.json()
         logger.info("Raw response type: %s", type(raw))
-
-        # Materialize iterators/generators
-        try:
-            if hasattr(raw, "__iter__") and not isinstance(raw, (str, list, dict)):
-                logger.info("Materializing iterator/generator response")
-                raw = list(raw)
-                logger.info("Materialized to list of length: %d", len(raw))
-        except Exception as mat_err:
-            logger.warning("Failed to materialize: %s", repr(mat_err))
-            # fall back to repr if cannot materialize
-            raw = repr(raw)
-
         logger.info("Debug endpoint returning raw response")
-        return {"raw": raw, "type": str(type(raw))}
+        
+        return {"raw": raw, "type": str(type(raw)), "status": response.status_code}
 
     except Exception as e:
         tb = traceback.format_exc()
