@@ -1,4 +1,4 @@
-from huggingface_hub import InferenceClient
+import requests
 from app.core.config import settings
 from app.core.logger import setup_logger
 import traceback
@@ -7,43 +7,69 @@ logger = setup_logger()
 
 # 🔹 Model configuration
 HF_MODEL = "distilgpt2"
+HF_API_URL = "https://api-inference.huggingface.co/models"
 
 
 class LLMService:
 
-    # 🔹 Use official InferenceClient for text generation
-    client = InferenceClient(
-        api_key=settings.HF_TOKEN,
-    )
-
     @staticmethod
     def generate(prompt: str) -> str:
-        """Generate text using distilgpt2 model via InferenceClient."""
+        """Generate text using distilgpt2 model via Huggingface Inference API."""
         try:
             logger.info("=== LLM Generation Start ===")
-            logger.info("Calling HF API with %s via InferenceClient", HF_MODEL)
+            logger.info("Calling HF API with %s", HF_MODEL)
             logger.info("Prompt preview: %s...", prompt[:100])
             
-            # Use InferenceClient.text_generation() - more reliable than direct HTTP
-            response = LLMService.client.text_generation(
-                prompt=prompt,
-                model=HF_MODEL,
-                max_new_tokens=300,
-                temperature=0.3,
+            url = f"{HF_API_URL}/{HF_MODEL}"
+            headers = {
+                "Authorization": f"Bearer {settings.HF_TOKEN}",
+            }
+            payload = {"inputs": prompt}
+            
+            logger.info("URL: %s", url)
+            logger.info("Auth header present: YES")
+            
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=60
             )
             
-            logger.info("LLM response type: %s", type(response))
-            logger.info("Generated text length: %d chars", len(str(response)))
+            logger.info("HF API response status: %d", response.status_code)
             
-            # Handle response - InferenceClient returns string directly
-            if isinstance(response, str):
-                return response.strip()
+            if response.status_code != 200:
+                logger.error("HF API returned %d: %s", response.status_code, response.text[:500])
+                raise RuntimeError(f"HF API error: {response.status_code}")
             
-            # Fallback if response is dict
-            if isinstance(response, dict) and "generated_text" in response:
-                return response["generated_text"].strip()
+            data = response.json()
+            logger.info("LLM response type: %s", type(data))
             
-            return str(response).strip()
+            # Parse response - HF Inference API returns list of dicts
+            if isinstance(data, list) and len(data) > 0:
+                result = data[0]
+                if isinstance(result, dict) and "generated_text" in result:
+                    # Return only the generated part, not including the input prompt
+                    full_text = result["generated_text"]
+                    # Remove the input prompt from the response
+                    if full_text.startswith(prompt):
+                        generated = full_text[len(prompt):].strip()
+                    else:
+                        generated = full_text.strip()
+                    return generated if generated else full_text
+                return str(result).strip()
+            
+            if isinstance(data, dict):
+                if "generated_text" in data:
+                    full_text = data["generated_text"]
+                    if full_text.startswith(prompt):
+                        generated = full_text[len(prompt):].strip()
+                    else:
+                        generated = full_text.strip()
+                    return generated if generated else full_text
+                return str(data).strip()
+            
+            return str(data).strip()
 
         except Exception as e:
             tb = traceback.format_exc()
