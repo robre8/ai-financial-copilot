@@ -10,8 +10,6 @@ class LLMService:
         api_key=settings.HF_API_KEY,
     )
 
-logger = setup_logger()
-
     # Use a model that's available in free tier
     model_name = "google/flan-t5-large"
 
