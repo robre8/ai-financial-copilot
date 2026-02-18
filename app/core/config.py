@@ -4,8 +4,11 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # 🔹 Huggingface API token for embeddings and LLM
+    # 🔹 Huggingface API token for embeddings
     HF_TOKEN: Optional[str] = None
+    
+    # 🔹 Groq API token for LLM
+    GROQ_API_KEY: Optional[str] = None
 
     model_config = ConfigDict(
         env_file=".env",
