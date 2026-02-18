@@ -12,7 +12,7 @@ This is a **RAG (Retrieval-Augmented Generation) system** for financial document
 - **[app/services/rag_service.py](app/services/rag_service.py)**: Orchestrates the RAG pipeline - no imports needed, it coordinates all steps
 - **[app/services/vector_store_service.py](app/services/vector_store_service.py)**: FAISS index with persistent JSON storage (manual `save()` required)
 - **[app/services/embedding_service.py](app/services/embedding_service.py)**: Huggingface sentence-transformers (all-MiniLM-L6-v2, 384 dimensions)
-- **[app/services/llm_service.py](app/services/llm_service.py)**: GPT-2 via Huggingface Inference API (direct HTTP requests)
+- **[app/services/llm_service.py](app/services/llm_service.py)**: Llama 3.1 via Groq API (free tier, high-quality)
 - **[app/services/pdf_service.py](app/services/pdf_service.py)**: PyPDF text extraction per page
 - **[app/utils/text_splitter.py](app/utils/text_splitter.py)**: LangChain text chunking
 
@@ -27,8 +27,8 @@ The system uses **in-context prompting** in [rag_service.py](app/services/rag_se
 ### Embedding Dimension Alignment
 All vector operations use **384-dimensional embeddings** (all-MiniLM-L6-v2 model). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
 
-### Huggingface API Configuration
-Both embedding and LLM services use the **InferenceClient** library which handles authentication automatically via the `HF_TOKEN` environment variable (from `.env`). The InferenceClient routes requests through Huggingface's optimal infrastructure without needing manual URL handling.
+### Groq LLM Integration
+The LLM service uses **Groq's Llama 3.1** model via the official [groq](https://pypi.org/project/groq/) Python SDK. Groq offers free tier with high-quality models and very fast inference. Authentication uses the `GROQ_API_KEY` environment variable from `.env`.
 
 ### Stateless vs Stateful Services
 - **RAGService.vector_store** is a **class variable singleton** (shared across requests)
@@ -41,11 +41,12 @@ Both embedding and LLM services use the **InferenceClient** library which handle
 ```bash
 # Docker build/run
 docker build -t financial-copilot .
-docker run -e HF_API_KEY=<key> -p 8000:8000 financial-copilot
+docker run -e GROQ_API_KEY=<key> -e HF_TOKEN=<hf_key> -p 8000:8000 financial-copilot
 
 # Local development (Python 3.11+)
 pip install -r requirements.txt
-export HF_API_KEY=<key>  # or set in .env file
+export GROQ_API_KEY=<key>  # or set in .env file
+export HF_TOKEN=<hf_key>   # or set in .env file
 uvicorn app.main:app --reload
 ```
 
@@ -69,6 +70,6 @@ Check [test/test_rag.py](test/test_rag.py) for test patterns. Key distinction: e
 
 ## Environment Setup
 
-- **Required**: `.env` file with `HF_TOKEN` (Huggingface API token)
+- **Required**: `.env` file with `GROQ_API_KEY` (Groq API token) and `HF_TOKEN` (Huggingface API token)
 - **Database**: SQLite ([app/models.py](app/models.py) defines schema, not currently used in routes)
 - **Embeddings**: 384-dim vectors stored in `vector.index` + `texts.json` in working directory

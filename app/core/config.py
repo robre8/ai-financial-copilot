@@ -6,6 +6,8 @@ from typing import Optional
 class Settings(BaseSettings):
     # 🔹 Huggingface Inference API token
     HF_TOKEN: Optional[str] = None
+    # 🔹 Groq API token for LLM generation
+    GROQ_API_KEY: Optional[str] = None
 
     model_config = ConfigDict(
         env_file=".env",
@@ -22,16 +24,16 @@ class Settings(BaseSettings):
 
     def validate(self):
         """Validate critical configuration"""
-        if not self.HF_TOKEN:
+        if not self.GROQ_API_KEY:
             raise ValueError(
-                "❌ HF_TOKEN is missing. "
+                "❌ GROQ_API_KEY is missing. "
                 "Please set it in environment variables or .env file. "
-                "Get one from: https://huggingface.co/settings/tokens"
+                "Get one from: https://console.groq.com"
             )
-        if not self.HF_TOKEN.startswith("hf_"):
+        if not self.GROQ_API_KEY.startswith("gsk_"):
             raise ValueError(
-                "❌ HF_TOKEN format is invalid. "
-                "It should start with 'hf_'"
+                "❌ GROQ_API_KEY format is invalid. "
+                "It should start with 'gsk_'"
             )
 
 

@@ -6,14 +6,15 @@ A RAG (Retrieval-Augmented Generation) system for financial document analysis po
 
 - 📄 **PDF Upload & Indexing**: Upload financial documents and automatically index them with embeddings
 - 🔍 **Semantic Search**: Query documents using natural language with context-aware retrieval
-- 💡 **AI-Powered Answers**: Get accurate financial insights based on your documents using GPT-2
+- 💡 **AI-Powered Answers**: Get accurate financial insights using Groq's Llama 3.1 (free & fast)
 - 🚀 **Fast & Scalable**: Built with FastAPI and FAISS vector database
 
 ## Quick Start
 
 ### Prerequisites
 - Python 3.11+
-- Huggingface API key ([get one here](https://huggingface.co/settings/tokens))
+- Groq API key ([get one here](https://console.groq.com))
+- Huggingface API key for embeddings ([get one here](https://huggingface.co/settings/tokens))
 
 ### Local Development
 
@@ -26,7 +27,7 @@ pip install -r requirements.txt
 
 2. **Configure Environment**
 ```bash
-cp .env.example .env
+cp .env.example .envGROQ_API_KEY and 
 # Edit .env and add your HF_TOKEN
 ```
 
@@ -41,7 +42,9 @@ Visit `http://localhost:8000/docs` for API documentation.
 
 ```bash
 docker build -t financial-copilot .
-docker run -e HF_TOKEN=your_key_here -p 8000:8000 financial-copilot
+```bash
+docker run -e GROQ_API_KEY=your_key_here -e HF_TOKEN=your_hf_token_here -p 8000:8000 financial-copilot
+```
 ```
 
 ## API Endpoints
@@ -79,7 +82,7 @@ Embeddings (all-MiniLM-L6-v2, 384-dim)
    ↓
 FAISS Vector Store
    ↓
-Context Retrieval (top-3 chunks)
+Context Retrievalroq - Llama 3.1p-3 chunks)
    ↓
 LLM Generation (GPT-2)
 ```
@@ -128,7 +131,7 @@ test/
 ## Key Services
 
 - **RAGService**: Orchestrates PDF indexing and question answering
-- **EmbeddingService**: Generates embeddings via Huggingface
+- **EmbeddingService**: Generates embedroq's Llama 3.1 (free tier)s via Huggingface
 - **VectorStoreService**: FAISS index with JSON persistence
 - **LLMService**: Text generation via GPT-2
 - **PDFService**: Document text extraction
