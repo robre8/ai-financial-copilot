@@ -25,7 +25,7 @@ The `VectorStoreService.save()` must be **explicitly called** - it does NOT auto
 The system uses **in-context prompting** in [rag_service.py](app/services/rag_service.py#L30-L44) with explicit fallback behavior: if no chunks found, return "No relevant information". The prompt instructs the LLM to stay grounded and avoid hallucination. Modify this template carefully—changes impact all AI responses.
 
 ### Embedding Dimension Alignment
-All vector operations use **768-dimensional embeddings** (sentence-transformers/all-MiniLM-L6-v2 model). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
+All vector operations use **384-dimensional embeddings** (sentence-transformers/all-MiniLM-L6-v2 model via Huggingface Inference API). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
 
 ### Huggingface API Integration
 The LLM and embedding services use **Huggingface Inference API** via the [huggingface_hub](https://pypi.org/project/huggingface-hub/) Python SDK. The system automatically tries multiple LLM models (Mistral 7B, Flan-T5, GPT-Neo) for resilience. Authentication uses the `HF_TOKEN` environment variable from `.env`.

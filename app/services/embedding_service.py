@@ -11,8 +11,8 @@ HF_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 class EmbeddingService:
-    # 🔹 Dimensión del modelo de embeddings
-    dimension = 768
+    # 🔹 Dimensión del modelo de embeddings (all-MiniLM-L6-v2 = 384)
+    dimension = 384
 
     @staticmethod
     def embed_text(text: str) -> list:
