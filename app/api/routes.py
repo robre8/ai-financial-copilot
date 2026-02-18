@@ -6,6 +6,20 @@ from app.schemas.rag_schema import QuestionRequest, QuestionResponse
 router = APIRouter()
 
 
+@router.get("/")
+def root():
+    """Health check and welcome endpoint"""
+    return {
+        "message": "AI Financial Copilot - RAG System",
+        "status": "online",
+        "docs": "/docs",
+        "endpoints": {
+            "upload_pdf": "POST /upload-pdf",
+            "ask_question": "POST /ask"
+        }
+    }
+
+
 @router.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     file_location = f"temp_{file.filename}"
