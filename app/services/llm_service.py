@@ -3,6 +3,8 @@ from app.core.config import settings
 from app.core.logger import setup_logger
 import traceback
 
+logger = setup_logger()
+
 
 class LLMService:
 
