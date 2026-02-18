@@ -11,8 +11,8 @@ This is a **RAG (Retrieval-Augmented Generation) system** for financial document
 - **[app/api/routes.py](app/api/routes.py)**: Two endpoints: `/upload-pdf` (index documents) and `/ask` (query with context)
 - **[app/services/rag_service.py](app/services/rag_service.py)**: Orchestrates the RAG pipeline - no imports needed, it coordinates all steps
 - **[app/services/vector_store_service.py](app/services/vector_store_service.py)**: FAISS index with persistent JSON storage (manual `save()` required)
-- **[app/services/embedding_service.py](app/services/embedding_service.py)**: Local sentence-transformers (all-MiniLM-L6-v2, no API needed)
-- **[app/services/llm_service.py](app/services/llm_service.py)**: Llama 3.1 via Groq API (free tier, high-quality)
+- **[app/services/embedding_service.py](app/services/embedding_service.py)**: Huggingface Inference API (sentence-transformers/all-MiniLM-L6-v2)
+- **[app/services/llm_service.py](app/services/llm_service.py)**: Huggingface Inference API (Mistral 7B, Flan-T5, GPT-Neo)
 - **[app/services/pdf_service.py](app/services/pdf_service.py)**: PyPDF text extraction per page
 - **[app/utils/text_splitter.py](app/utils/text_splitter.py)**: LangChain text chunking
 
@@ -25,10 +25,10 @@ The `VectorStoreService.save()` must be **explicitly called** - it does NOT auto
 The system uses **in-context prompting** in [rag_service.py](app/services/rag_service.py#L30-L44) with explicit fallback behavior: if no chunks found, return "No relevant information". The prompt instructs the LLM to stay grounded and avoid hallucination. Modify this template carefully—changes impact all AI responses.
 
 ### Embedding Dimension Alignment
-All vector operations use **384-dimensional embeddings** (all-MiniLM-L6-v2 model). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
+All vector operations use **768-dimensional embeddings** (sentence-transformers/all-MiniLM-L6-v2 model). If changing embedding models, update `EmbeddingService.dimension` in both [embedding_service.py](app/services/embedding_service.py#L13) and the FAISS index initialization in [vector_store_service.py](app/services/vector_store_service.py#L11).
 
-### Groq LLM Integration
-The LLM service uses **Groq's Llama 3.1** model via the official [groq](https://pypi.org/project/groq/) Python SDK. Groq offers free tier with high-quality models and very fast inference. Authentication uses the `GROQ_API_KEY` environment variable from `.env`.
+### Huggingface API Integration
+The LLM and embedding services use **Huggingface Inference API** via the [huggingface_hub](https://pypi.org/project/huggingface-hub/) Python SDK. The system automatically tries multiple LLM models (Mistral 7B, Flan-T5, GPT-Neo) for resilience. Authentication uses the `HF_TOKEN` environment variable from `.env`.
 
 ### Stateless vs Stateful Services
 - **RAGService.vector_store** is a **class variable singleton** (shared across requests)
@@ -41,11 +41,11 @@ The LLM service uses **Groq's Llama 3.1** model via the official [groq](https://
 ```bash
 # Docker build/run
 docker build -t financial-copilot .
-docker run -e GROQ_API_KEY=<key> -p 8000:8000 financial-copilot
+docker run -e HF_TOKEN=<token> -p 8000:8000 financial-copilot
 
 # Local development (Python 3.11+)
 pip install -r requirements.txt
-export GROQ_API_KEY=<key>  # or set in .env file
+export HF_TOKEN=<token>  # or set in .env file
 uvicorn app.main:app --reload
 ```
 
@@ -69,6 +69,6 @@ Check [test/test_rag.py](test/test_rag.py) for test patterns. Key distinction: e
 
 ## Environment Setup
 
-- **Required**: `.env` file with `GROQ_API_KEY` (Groq API token)
+- **Required**: `.env` file with `HF_TOKEN` (Huggingface API token)
 - **Database**: SQLite ([app/models.py](app/models.py) defines schema, not currently used in routes)
-- **Embeddings**: 384-dim vectors stored in `vector.index` + `texts.json` in working directory
+- **Embeddings**: 768-dim vectors stored in `vector.index` + `texts.json` in working directory
