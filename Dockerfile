@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+# Python configuration
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
