@@ -6,7 +6,8 @@ import traceback
 logger = setup_logger()
 
 # 🔹 Model configuration
-HF_MODEL = "distilgpt2"
+# Using gpt2 - public model always available in HF Inference API
+HF_MODEL = "gpt2"
 HF_API_URL = "https://api-inference.huggingface.co/models"
 
 
