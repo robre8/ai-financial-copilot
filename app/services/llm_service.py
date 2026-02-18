@@ -8,7 +8,7 @@ logger = setup_logger()
 
 # Direct API endpoint for Huggingface Inference API
 HF_API_BASE = "https://router.huggingface.co/models"
-HF_MODEL = "EleutherAI/gpt-neo-125M"
+HF_MODEL = "distilgpt2"
 HF_HEADERS = {
     "Authorization": f"Bearer {settings.HF_API_KEY}"
 }
@@ -20,7 +20,7 @@ class LLMService:
         api_key=settings.HF_API_KEY,
     )
 
-    model_name = "EleutherAI/gpt-neo-125M"
+    model_name = "distilgpt2"
 
     @staticmethod
     def generate(prompt: str) -> str:
