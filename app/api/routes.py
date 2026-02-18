@@ -109,6 +109,8 @@ def debug_llm_raw(request: DebugPromptRequest):
     check_api_key()
 
     try:
+        logger.info("Debug LLM raw: calling text_generation with prompt: %s", request.prompt[:50])
+        
         raw = LLMService.client.text_generation(
             request.prompt,
             model=LLMService.model_name,
@@ -116,18 +118,24 @@ def debug_llm_raw(request: DebugPromptRequest):
             temperature=0.3,
             return_full_text=False,
         )
+        
+        logger.info("Raw response type: %s", type(raw))
 
         # Materialize iterators/generators
         try:
             if hasattr(raw, "__iter__") and not isinstance(raw, (str, list, dict)):
+                logger.info("Materializing iterator/generator response")
                 raw = list(raw)
-        except Exception:
+                logger.info("Materialized to list of length: %d", len(raw))
+        except Exception as mat_err:
+            logger.warning("Failed to materialize: %s", repr(mat_err))
             # fall back to repr if cannot materialize
             raw = repr(raw)
 
-        return {"raw": raw}
+        logger.info("Debug endpoint returning raw response")
+        return {"raw": raw, "type": str(type(raw))}
 
     except Exception as e:
         tb = traceback.format_exc()
-        logger.error("Debug LLM raw failed: %s", tb)
-        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+        logger.error("Debug LLM raw failed with exception: %s\nTraceback:\n%s", repr(e), tb)
+        raise HTTPException(status_code=500, detail=f"Debug failed: {repr(e)} | {tb}")
