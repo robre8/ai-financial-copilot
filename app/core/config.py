@@ -1,7 +1,11 @@
-import os
+from pydantic_settings import BaseSettings
 
-class Settings:
-    USE_MOCK = os.getenv("USE_MOCK", "true").lower() == "true"
+
+class Settings(BaseSettings):
+    HF_API_KEY: str
+
+    class Config:
+        env_file = ".env"
+
 
 settings = Settings()
-
