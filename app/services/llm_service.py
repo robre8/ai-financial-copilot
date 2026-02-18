@@ -11,10 +11,10 @@ logger = setup_logger()
 HF_API_BASE = "https://api-inference.huggingface.co/models"
 HF_HEADERS = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
 HF_MODELS = [
-    "google/gemma-7b",
-    "mistralai/Mistral-7B-Instruct-v0.2",
-    "deepseek-ai/DeepSeek-R1",
-    "HuggingFaceH4/zephyr-7b-beta",
+    "google/flan-t5-small",
+    "gpt2",
+    "facebook/opt-350m",
+    "distilgpt2",
 ]
 
 
