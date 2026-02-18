@@ -6,9 +6,10 @@ from app.core.logger import setup_logger
 logger = setup_logger()
 
 HF_MODELS = [
-    "mistralai/Mistral-7B-Instruct-v0.2",
-    "HuggingFaceH4/zephyr-7b-beta",
-    "tiiuae/falcon-7b-instruct",
+    "gpt2",
+    "distilgpt2",
+    "EleutherAI/gpt-neo-125m",
+    "facebook/opt-125m",
 ]
 
 
