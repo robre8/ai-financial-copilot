@@ -8,13 +8,13 @@ import traceback
 logger = setup_logger()
 
 # 🔹 Huggingface API configuration
-HF_API_BASE = "https://api-inference.huggingface.co/models"
+HF_API_BASE = "https://api-inference.huggingface.co/pipeline"
 HF_HEADERS = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
 HF_MODELS = [
-    "google/flan-t5-small",
-    "gpt2",
-    "facebook/opt-350m",
-    "distilgpt2",
+    ("google/flan-t5-small", "text2text-generation"),
+    ("gpt2", "text-generation"),
+    ("facebook/opt-350m", "text-generation"),
+    ("distilgpt2", "text-generation"),
 ]
 
 
@@ -24,9 +24,10 @@ class LLMService:
     def generate(prompt: str) -> str:
         """Generate text using Huggingface Inference API"""
         try:
-            for model_name in HF_MODELS:
+            for model_info in HF_MODELS:
                 try:
-                    url = f"{HF_API_BASE}/{model_name}"
+                    model_name, task_type = model_info
+                    url = f"{HF_API_BASE}/{task_type}/{model_name}"
                     
                     payload = {"inputs": prompt}
                     response = requests.post(
