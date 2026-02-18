@@ -6,7 +6,7 @@ A RAG (Retrieval-Augmented Generation) system for financial document analysis po
 
 - 📄 **PDF Upload & Indexing**: Upload financial documents and automatically index them with embeddings
 - 🔍 **Semantic Search**: Query documents using natural language with context-aware retrieval
-- 💡 **AI-Powered Answers**: Get accurate financial insights based on your documents using GPT-2
+- 💡 **AI-Powered Answers**: Get accurate financial insights based on your documents using EleutherAI/gpt-neo-125M
 - 🚀 **Fast & Scalable**: Built with FastAPI and FAISS vector database
 
 ## Quick Start
@@ -81,7 +81,7 @@ FAISS Vector Store
    ↓
 Context Retrieval (top-3 chunks)
    ↓
-LLM Generation (GPT-2)
+LLM Generation (EleutherAI/gpt-neo-125M)
 ```
 
 ## Environment Variables
@@ -130,7 +130,7 @@ test/
 - **RAGService**: Orchestrates PDF indexing and question answering
 - **EmbeddingService**: Generates embeddings via Huggingface
 - **VectorStoreService**: FAISS index with JSON persistence
-- **LLMService**: Text generation via GPT-2
+- **LLMService**: Text generation via EleutherAI/gpt-neo-125M
 - **PDFService**: Document text extraction
 
 ## Important Notes
