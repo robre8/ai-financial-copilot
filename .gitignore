@@ -54,7 +54,9 @@ texts.json
 temp_*.pdf
 
 # Testing
+test/
 test_*.py
+create_test_*.py
 .pytest_cache/
 .coverage
 htmlcov/
