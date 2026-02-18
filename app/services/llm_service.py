@@ -46,9 +46,12 @@ class LLMService:
                         gc.collect()
                         
                         if isinstance(result, list) and len(result) > 0:
-                            if isinstance(result[0], dict) and 'generated_text' in result[0]:
-                                logger.info(f"✅ Success with model: {model}")
-                                return result[0]['generated_text'].strip()
+                            if isinstance(result[0], dict):
+                                # Check for common response keys from different models
+                                for key in ['generated_text', 'summary_text', 'translation_text']:
+                                    if key in result[0]:
+                                        logger.info(f"✅ Success with model: {model}")
+                                        return result[0][key].strip()
                         return str(result)
                     
                     elif response.status_code == 503:
@@ -64,8 +67,12 @@ class LLMService:
                             if response.status_code == 200:
                                 result = response.json()
                                 if isinstance(result, list) and len(result) > 0:
-                                    if isinstance(result[0], dict) and 'generated_text' in result[0]:
-                                        return result[0]['generated_text'].strip()
+                                    if isinstance(result[0], dict):
+                                        # Check for common response keys from different models
+                                        for key in ['generated_text', 'summary_text', 'translation_text']:
+                                            if key in result[0]:
+                                                return result[0][key].strip()
+                                return str(result)
                         continue
                     
                     else:
@@ -73,7 +80,7 @@ class LLMService:
                         try:
                             error_msg = response.json()
                             logger.warning(f"Model {model} failed: {response.status_code} - {error_msg}")
-                        except:
+                        except Exception:
                             logger.warning(f"Model {model} failed: {response.status_code} - {response.text[:200]}")
                         continue
                         

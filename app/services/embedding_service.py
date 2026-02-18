@@ -29,8 +29,8 @@ class EmbeddingService:
             
             # 🔹 Normalize to 1D array: feature_extraction can return nested arrays
             embedding = np.array(embedding)
-            if embedding.ndim > 1:
-                # If 2D (e.g., [[0.1, 0.2, ...]]), take mean pooling or first vector
+            while embedding.ndim > 1:
+                # If 2D or 3D (e.g., [[0.1, 0.2, ...]] or [[[...]]]), take mean pooling
                 embedding = embedding.mean(axis=0)
             
             embedding = embedding.flatten().tolist()
