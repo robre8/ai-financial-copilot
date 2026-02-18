@@ -111,37 +111,13 @@ def debug_llm_raw(request: DebugPromptRequest):
     check_api_key()
 
     try:
-        from app.services.llm_service import HF_API_BASE, HF_HEADERS, HF_MODELS
+        from app.services.llm_service import LLMService
         
         logger.info("Debug LLM raw: trying models with prompt: %s", request.prompt[:50])
         
-        for model in HF_MODELS:
-            url = f"{HF_API_BASE}/{model}"
-            logger.info("Trying model: %s at %s", model, url)
-            
-            try:
-                payload = {"inputs": request.prompt}
-                response = requests.post(
-                    url,
-                    headers=HF_HEADERS,
-                    json=payload,
-                    timeout=30
-                )
-                
-                logger.info("Model %s returned status: %d", model, response.status_code)
-                
-                if response.status_code == 200:
-                    raw = response.json()
-                    return {"raw": raw, "type": str(type(raw)), "status": response.status_code, "model": model}
-                else:
-                    logger.warning("Model %s failed with status %d, trying next", model, response.status_code)
-                    continue
-                    
-            except Exception as model_err:
-                logger.warning("Model %s exception: %s", model, repr(model_err))
-                continue
+        result = LLMService.generate(request.prompt)
         
-        raise RuntimeError("All models exhausted without success")
+        return {"result": result, "type": str(type(result)), "status": 200}
 
     except Exception as e:
         tb = traceback.format_exc()
