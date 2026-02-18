@@ -26,24 +26,26 @@ class LLMService:
                 return_full_text=False,
             )
 
-            # If the HF client returns a generator/iterator, consume safely
+            # If the HF client returns a generator/iterator, materialize it safely
             try:
                 if hasattr(response, "__iter__") and not isinstance(response, (str, list, dict)):
-                    # Collect up to a few items to avoid streaming indefinitely
-                    collected = []
-                    for i, item in enumerate(response):
-                        collected.append(item)
-                        if i >= 4:
-                            break
+                    try:
+                        materialized = list(response)
+                    except Exception as mat_exc:
+                        logger.error("Failed to materialize iterator response: %s", repr(mat_exc))
+                        raise RuntimeError("Failed to materialize iterator response")
 
-                    if len(collected) == 0:
-                        raise StopIteration()
-                    response = collected[0] if len(collected) == 1 else collected
-            except StopIteration:
-                logger.error("LLM client returned no data (StopIteration)")
-                raise RuntimeError("LLM client returned no data")
-            except Exception:
-                # Non-fatal: fall back to using the raw response
+                    if not materialized:
+                        logger.error("LLM client returned no items when materializing iterator")
+                        raise RuntimeError("LLM client returned no data")
+
+                    response = materialized[0] if len(materialized) == 1 else materialized
+            except RuntimeError:
+                # Re-raise runtime errors with clearer message
+                raise
+            except Exception as mat_outer_exc:
+                logger.warning("Non-fatal error while handling iterator: %s", repr(mat_outer_exc))
+                # Fall through and try to handle the raw response
                 pass
 
             # Log raw response for debugging
