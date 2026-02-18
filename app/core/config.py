@@ -4,8 +4,6 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # 🔹 Huggingface Inference API token
-    HF_TOKEN: Optional[str] = None
     # 🔹 Groq API token for LLM generation
     GROQ_API_KEY: Optional[str] = None
 
@@ -17,10 +15,6 @@ class Settings(BaseSettings):
 
     def __init__(self, **data):
         super().__init__(**data)
-        # Check for legacy HF_API_KEY if HF_TOKEN not set
-        if not self.HF_TOKEN:
-            import os
-            self.HF_TOKEN = os.getenv("HF_API_KEY")
 
     def validate(self):
         """Validate critical configuration"""

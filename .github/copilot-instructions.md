@@ -11,7 +11,7 @@ This is a **RAG (Retrieval-Augmented Generation) system** for financial document
 - **[app/api/routes.py](app/api/routes.py)**: Two endpoints: `/upload-pdf` (index documents) and `/ask` (query with context)
 - **[app/services/rag_service.py](app/services/rag_service.py)**: Orchestrates the RAG pipeline - no imports needed, it coordinates all steps
 - **[app/services/vector_store_service.py](app/services/vector_store_service.py)**: FAISS index with persistent JSON storage (manual `save()` required)
-- **[app/services/embedding_service.py](app/services/embedding_service.py)**: Huggingface sentence-transformers (all-MiniLM-L6-v2, 384 dimensions)
+- **[app/services/embedding_service.py](app/services/embedding_service.py)**: Local sentence-transformers (all-MiniLM-L6-v2, no API needed)
 - **[app/services/llm_service.py](app/services/llm_service.py)**: Llama 3.1 via Groq API (free tier, high-quality)
 - **[app/services/pdf_service.py](app/services/pdf_service.py)**: PyPDF text extraction per page
 - **[app/utils/text_splitter.py](app/utils/text_splitter.py)**: LangChain text chunking
@@ -41,12 +41,11 @@ The LLM service uses **Groq's Llama 3.1** model via the official [groq](https://
 ```bash
 # Docker build/run
 docker build -t financial-copilot .
-docker run -e GROQ_API_KEY=<key> -e HF_TOKEN=<hf_key> -p 8000:8000 financial-copilot
+docker run -e GROQ_API_KEY=<key> -p 8000:8000 financial-copilot
 
 # Local development (Python 3.11+)
 pip install -r requirements.txt
 export GROQ_API_KEY=<key>  # or set in .env file
-export HF_TOKEN=<hf_key>   # or set in .env file
 uvicorn app.main:app --reload
 ```
 
@@ -70,6 +69,6 @@ Check [test/test_rag.py](test/test_rag.py) for test patterns. Key distinction: e
 
 ## Environment Setup
 
-- **Required**: `.env` file with `GROQ_API_KEY` (Groq API token) and `HF_TOKEN` (Huggingface API token)
+- **Required**: `.env` file with `GROQ_API_KEY` (Groq API token)
 - **Database**: SQLite ([app/models.py](app/models.py) defines schema, not currently used in routes)
 - **Embeddings**: 384-dim vectors stored in `vector.index` + `texts.json` in working directory

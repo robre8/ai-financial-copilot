@@ -15,8 +15,5 @@ services:
       - key: GROQ_API_KEY
         scope: run
         sync: false
-      - key: HF_TOKEN
-        scope: run
-        sync: false
       - key: PYTHONUNBUFFERED
         value: 1

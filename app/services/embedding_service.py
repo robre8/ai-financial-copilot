@@ -1,44 +1,32 @@
-from huggingface_hub import InferenceClient
-from app.core.config import settings
-import numpy as np
+import logging
+from sentence_transformers import SentenceTransformer
+
+logger = logging.getLogger("financial_copilot")
 
 
 class EmbeddingService:
-
+    # 🔹 Lazy-load model to avoid unnecessary initialization
+    model = None
+    
     # 🔹 Dimensión del modelo
     dimension = 384
-    
-    model_name = "sentence-transformers/all-MiniLM-L6-v2"
-    
-    # 🔹 Use official HF provider for optimal routing
-    client = InferenceClient(
-        provider="hf-inference",
-        api_key=settings.HF_TOKEN,
-    )
+
+    @classmethod
+    def get_model(cls):
+        """Load embedding model on first use (lazy initialization)"""
+        if cls.model is None:
+            logger.info("Loading embedding model (all-MiniLM-L6-v2)...")
+            cls.model = SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("Embedding model loaded successfully")
+        return cls.model
 
     @staticmethod
-    def embed_text(text: str):
-        """Generate embeddings using Huggingface Inference API"""
+    def embed_text(text: str) -> list:
+        """Generate embeddings locally using sentence-transformers"""
         try:
-            # Use the official InferenceClient for feature extraction
-            response = EmbeddingService.client.feature_extraction(
-                text,
-                model=EmbeddingService.model_name,
-            )
-            
-            # Convert numpy array to list if needed
-            if isinstance(response, np.ndarray):
-                response = response.tolist()
-            
-            # Handle list format from Huggingface
-            if isinstance(response, list):
-                # If it's a list of lists (wrapped response), extract the first embedding
-                if len(response) > 0 and isinstance(response[0], (list, tuple)):
-                    return response[0]
-                # If it's a simple list, return as-is
-                return response
-            
-            raise ValueError(f"Unexpected embedding response format: {type(response)}")
-            
+            model = EmbeddingService.get_model()
+            embedding = model.encode(text, convert_to_tensor=False)
+            return embedding.tolist()
         except Exception as e:
-            raise RuntimeError(f"Error generating embedding: {str(e)}")
+            logger.error(f"Error generating embedding: {repr(e)}")
+            raise RuntimeError(f"Error generating embedding: {repr(e)}")
