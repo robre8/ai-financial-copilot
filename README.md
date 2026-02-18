@@ -1,14 +1,14 @@
 # AI Financial Copilot
 
-A RAG (Retrieval-Augmented Generation) system for financial document analysis using Huggingface embeddings and LLM inference API.
+A RAG (Retrieval-Augmented Generation) system for financial document analysis using Huggingface embeddings and Groq LLM API.
 
 ## Features
 
 - **PDF Upload & Indexing**: Upload financial documents and automatically index them with 384-dimensional embeddings
 - **Semantic Search**: Query documents using natural language with context-aware retrieval
-- **AI-Powered Answers**: Get financial insights using Huggingface inference API with graceful fallback
-- **Fast & Scalable**: Built with FastAPI, FAISS vector database, and optimized for production
-- **Zero Costs**: Free tier compatible (Huggingface, Render free tier)
+- **AI-Powered Answers**: Get financial insights powered by Groq's fast LLM API
+- **Fast & Scalable**: Built with FastAPI, FAISS vector database, optimized for production
+- **Free Tier Compatible**: Huggingface embeddings + Groq LLM (both free tier)
 - **Production Ready**: Deployed on Render with memory optimization
 
 ## Quick Start
@@ -16,6 +16,7 @@ A RAG (Retrieval-Augmented Generation) system for financial document analysis us
 ### Prerequisites
 - Python 3.11+
 - Huggingface API token ([get one here](https://huggingface.co/settings/tokens)) - **required for embeddings**
+- Groq API key ([get one here](https://console.groq.com/keys)) - **required for LLM generation**
 
 ### Local Development
 
@@ -30,8 +31,9 @@ pip install -r requirements.txt
 
 2. **Configure Environment**
 ```bash
-# Copy .env template and add your HF_TOKEN
+# Create .env file with your API tokens
 echo "HF_TOKEN=your_huggingface_token_here" > .env
+echo "GROQ_API_KEY=your_groq_api_key_here" >> .env
 ```
 
 3. **Run Server**
@@ -101,19 +103,19 @@ Semantic Search (similarity matching)
     ↓
 Context Retrieval (top-3 chunks)
     ↓
-LLM Generation (Huggingface Inference API with fallback)
+LLM Generation (Groq API with 3-model fallback chain)
     ↓
 Response to User
 ```
 
-**Fallback Behavior**: If LLM models are unavailable, system returns processed context directly (still useful for document analysis)
+**LLM Models**: Uses Groq with automatic fallback chain: `llama-3.1-8b-instant` → `llama-3.1-70b-versatile` → `mixtral-8x7b-32768`
 
 ## Tech Stack
 
 - **Framework**: FastAPI + Uvicorn (single worker, 10 concurrent requests)
 - **Vector DB**: FAISS IndexFlatL2 (384-dim, max 5000 vectors)
 - **Embeddings**: Huggingface InferenceClient API (sentence-transformers/all-MiniLM-L6-v2)
-- **LLM API**: Huggingface Inference API with automatic fallback
+- **LLM API**: Groq API (llama-3.1-8b-instant, llama-3.1-70b-versatile, mixtral-8x7b-32768)
 - **PDF Processing**: PyPDF
 - **Text Chunking**: Custom text splitter (512 tokens/chunk, 100 token overlap)
 - **Deployment**: Docker + Render (free tier, 512MB RAM)
@@ -122,10 +124,13 @@ Response to User
 ## Environment Variables
 
 ```bash
-HF_TOKEN=hf_your_token_here  # Required: Huggingface API token for embeddings
+HF_TOKEN=hf_your_token_here         # Required: Huggingface API token for embeddings
+GROQ_API_KEY=gsk_your_key_here      # Required: Groq API key for LLM generation
 ```
 
-Get your token at: https://huggingface.co/settings/tokens
+Get your tokens at:
+- Huggingface: https://huggingface.co/settings/tokens
+- Groq: https://console.groq.com/keys
 
 ## Example Usage
 
@@ -178,9 +183,9 @@ To deploy:
 - Single worker mode to prevent swapping
 
 ### LLM Generation Failures
-- System gracefully falls back to returning context chunks
-- LLM models may be unavailable on free tier
-- Check Huggingface API status or add GROQ_API_KEY for alternative LLM
+- Groq API provides 3-model fallback chain for high availability
+- If all models fail, check Groq API status at https://status.groq.com/
+- Verify GROQ_API_KEY is set correctly in environment variables
 
 ### PDF Upload Issues
 - Ensure PDF is valid and not corrupted
