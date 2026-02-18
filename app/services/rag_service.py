@@ -47,6 +47,9 @@ If the answer is not in the context, say:
         try:
             return LLMService.generate(prompt)
         except Exception as e:
-            logger.warning("LLM generation failed, returning raw context: %s", repr(e))
+            import traceback as tb_module
+            tb = tb_module.format_exc()
+            logger.error("LLM generation failed: %s\nTraceback:\n%s", repr(e), tb)
+            logger.warning("Falling back to returning raw context chunks")
             # Fallback: return extracted context directly
             return f"Based on the indexed documents, here is relevant information:\n\n{context}"

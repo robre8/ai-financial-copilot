@@ -26,10 +26,14 @@ class LLMService:
     def generate(prompt: str) -> str:
         """Generate text from prompt using EleutherAI/gpt-neo-125M."""
         try:
+            logger.info("=== LLM Generation Start ===")
             logger.info("Calling HF API with %s", HF_MODEL)
+            logger.info("Prompt preview: %s...", prompt[:100])
             
             url = f"{HF_API_BASE}/{HF_MODEL}"
             payload = {"inputs": prompt}
+            logger.info("URL: %s", url)
+            logger.info("Auth header present: %s", "YES" if HF_HEADERS.get("Authorization") else "NO")
             
             response = requests.post(
                 url,
@@ -38,12 +42,14 @@ class LLMService:
                 timeout=60
             )
             
+            logger.info("HF API response status: %d", response.status_code)
+            
             if response.status_code != 200:
-                logger.error("HF API returned %d: %s", response.status_code, response.text)
+                logger.error("HF API returned %d: %s", response.status_code, response.text[:200])
                 raise RuntimeError(f"HF API error: {response.status_code}")
             
             data = response.json()
-            logger.info("LLM success, response type: %s", type(data))
+            logger.info("LLM response type: %s", type(data))
             
             # Parse response from HF API
             if isinstance(data, list) and len(data) > 0:
@@ -60,7 +66,8 @@ class LLMService:
             return str(data).strip()
 
         except Exception as e:
-            logger.error("LLM generation failed: %s", repr(e))
+            tb = traceback.format_exc()
+            logger.error("LLM generation failed: %s\nTraceback:\n%s", repr(e), tb)
             raise RuntimeError(f"Error generating text: {repr(e)}")
 
 
