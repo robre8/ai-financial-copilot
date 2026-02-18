@@ -5,7 +5,8 @@ from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from app.database import engine
 from sqlalchemy import text
-
+from app.database import SessionLocal
+from app.models import Question
 
 
 logger = setup_logger()
@@ -52,3 +53,18 @@ def test_db():
     with engine.connect() as connection:
         result = connection.execute(text("SELECT 1"))
         return {"database": "connected"}
+
+
+@app.post("/save-test")
+def save_test():
+    db = SessionLocal()
+    new_question = Question(
+        question="Test question",
+        answer="Test answer"
+    )
+    db.add(new_question)
+    db.commit()
+    db.refresh(new_question)
+    db.close()
+
+    return {"message": "Saved", "id": new_question.id}
