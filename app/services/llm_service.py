@@ -8,7 +8,7 @@ import traceback
 logger = setup_logger()
 
 # 🔹 Huggingface API configuration
-HF_API_BASE = "https://api-inference.huggingface.co/models"
+HF_API_BASE = "https://router.huggingface.co/hf-inference/models"
 HF_HEADERS = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
 HF_MODELS = [
     "google/flan-t5-base",  # Faster, more reliable
