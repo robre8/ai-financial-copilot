@@ -4,12 +4,11 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # 🔹 Groq API token for LLM generation
-    GROQ_API_KEY: Optional[str] = None
+    # 🔹 Huggingface API token for embeddings and LLM
+    HF_TOKEN: Optional[str] = None
 
     model_config = ConfigDict(
         env_file=".env",
-        # Support both HF_TOKEN and legacy HF_API_KEY names
         extra="ignore"
     )
 
@@ -18,16 +17,11 @@ class Settings(BaseSettings):
 
     def validate(self):
         """Validate critical configuration"""
-        if not self.GROQ_API_KEY:
+        if not self.HF_TOKEN:
             raise ValueError(
-                "❌ GROQ_API_KEY is missing. "
+                "❌ HF_TOKEN is missing. "
                 "Please set it in environment variables or .env file. "
-                "Get one from: https://console.groq.com"
-            )
-        if not self.GROQ_API_KEY.startswith("gsk_"):
-            raise ValueError(
-                "❌ GROQ_API_KEY format is invalid. "
-                "It should start with 'gsk_'"
+                "Get one from: https://huggingface.co/settings/tokens"
             )
 
 
