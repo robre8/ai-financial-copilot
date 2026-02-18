@@ -55,7 +55,7 @@ def test_db():
         return {"database": "connected"}
 
 
-@app.get("/save-test")
+@app.post("/save-test")
 def save_test():
     db = SessionLocal()
     new_question = Question(
