@@ -7,7 +7,7 @@ import traceback
 logger = setup_logger()
 
 # Direct API endpoint for Huggingface Inference API
-HF_API_BASE = "https://api-inference.huggingface.co/models"
+HF_API_BASE = "https://router.huggingface.co/models"
 HF_MODEL = "EleutherAI/gpt-neo-125M"
 HF_HEADERS = {
     "Authorization": f"Bearer {settings.HF_API_KEY}"
