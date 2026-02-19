@@ -22,7 +22,10 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [expandedMessage, setExpandedMessage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,6 +49,45 @@ export default function ChatInterface() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadMessage('❌ Solo se aceptan archivos PDF');
+      setTimeout(() => setUploadMessage(null), 3000);
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadMessage('❌ El archivo es demasiado grande (máx 50MB)');
+      setTimeout(() => setUploadMessage(null), 3000);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await axios.post(`${API_BASE}/upload-pdf`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setUploadMessage(`✅ ${file.name} subido correctamente`);
+      setTimeout(() => setUploadMessage(null), 5000);
+      // Refresh messages to show new context
+      setMessages([...messages]);
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      const errorMsg = error.response?.data?.detail || error.message;
+      setUploadMessage(`❌ Error: ${errorMsg}`);
+      setTimeout(() => setUploadMessage(null), 5000);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -280,7 +322,41 @@ export default function ChatInterface() {
           {/* Input Form */}
           <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-100 dark:from-slate-800 via-white dark:via-slate-800 to-transparent pt-8 px-4 pb-6">
             <div className="max-w-4xl mx-auto">
+              {/* Upload Message */}
+              {uploadMessage && (
+                <div className={`mb-3 p-3 rounded-lg text-center text-sm font-medium ${
+                  uploadMessage.includes('✅') 
+                    ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' 
+                    : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200'
+                }`}>
+                  {uploadMessage}
+                </div>
+              )}
+              
               <form onSubmit={handleAsk} className="flex gap-3">
+                {/* Hidden File Input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                  className="hidden"
+                />
+                
+                {/* Upload Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || loading}
+                  className="px-5 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Upload PDF"
+                >
+                  {uploading ? '⏳' : '📁'}
+                </button>
+
                 <input
                   type="text"
                   value={question}
