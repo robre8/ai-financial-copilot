@@ -15,8 +15,8 @@ GROQ_MODELS = [
 class LLMService:
 
     @staticmethod
-    def generate(prompt: str) -> str:
-        """Generate text using Groq API"""
+    def generate(prompt: str) -> tuple[str, str]:
+        """Generate text using Groq API and return (text, model)."""
         try:
             client = Groq(api_key=settings.GROQ_API_KEY)
 
@@ -40,7 +40,7 @@ class LLMService:
                         logger.info(f"✅ Success with Groq model: {model}")
                         del client
                         gc.collect()
-                        return result.strip()
+                        return result.strip(), model
 
                 except Exception as model_err:
                     logger.warning(f"Groq model {model} failed: {repr(model_err)}")

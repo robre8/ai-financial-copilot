@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # 🔹 Groq API token for LLM
     GROQ_API_KEY: Optional[str] = None
 
+    # 🔹 Frontend origins for CORS (comma-separated)
+    FRONTEND_ORIGINS: str = "http://localhost:5173"
+
     model_config = ConfigDict(
         env_file=".env",
         extra="ignore"

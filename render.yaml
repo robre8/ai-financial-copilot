@@ -7,10 +7,10 @@ services:
     pythonVersion: 3.11
     
     build:
-      command: pip install -r requirements.txt
+      command: pip install -r backend/requirements.txt
     
     # 🔹 Optimized start command: single worker to reduce memory usage
-    start: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 10
+    start: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 10
     
     envVars:
       - key: HF_TOKEN

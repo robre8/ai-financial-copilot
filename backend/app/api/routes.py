@@ -91,12 +91,18 @@ def ask_question(request: QuestionRequest):
         if not request.question or len(request.question.strip()) == 0:
             raise HTTPException(status_code=400, detail="Question cannot be empty")
         
-        answer = RAGService.ask(request.question)
+        result = RAGService.ask(request.question)
         
         # 🔹 Cleanup memory after inference
         gc.collect()
         
-        return QuestionResponse(answer=answer)
+        return QuestionResponse(
+            answer=result["answer"],
+            model=result["model"],
+            chunks=result["chunks"],
+            chunk_count=len(result["chunks"]),
+            context=result["context"]
+        )
     
     except HTTPException:
         raise
@@ -115,9 +121,9 @@ def debug_llm_raw(request: DebugPromptRequest):
         
         logger.info("Debug LLM raw: trying models with prompt: %s", request.prompt[:50])
         
-        result = LLMService.generate(request.prompt)
-        
-        return {"result": result, "type": str(type(result)), "status": 200}
+        result, model_used = LLMService.generate(request.prompt)
+
+        return {"result": result, "model": model_used, "type": str(type(result)), "status": 200}
 
     except Exception as e:
         tb = traceback.format_exc()

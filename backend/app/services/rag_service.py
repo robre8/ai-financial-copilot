@@ -22,12 +22,17 @@ class RAGService:
             RAGService.vector_store.add(emb, chunk)
 
     @staticmethod
-    def ask(query: str):
+    def ask(query: str) -> dict:
         q_emb = EmbeddingService.embed_text(query)
         context_chunks = RAGService.vector_store.search(q_emb, k=3)
 
         if not context_chunks:
-           return "No relevant information was found in the indexed documents."
+            return {
+                "answer": "No relevant information was found in the indexed documents.",
+                "model": "none",
+                "chunks": [],
+                "context": ""
+            }
     
         context = "\n\n".join(context_chunks)
 
@@ -45,11 +50,22 @@ If the answer is not in the context, say:
 """
 
         try:
-            return LLMService.generate(prompt)
+            answer, model_used = LLMService.generate(prompt)
+            return {
+                "answer": answer,
+                "model": model_used,
+                "chunks": context_chunks,
+                "context": context
+            }
         except Exception as e:
             import traceback as tb_module
             tb = tb_module.format_exc()
             logger.error("LLM generation failed: %s\nTraceback:\n%s", repr(e), tb)
             logger.warning("Falling back to returning raw context chunks")
             # Fallback: return extracted context directly
-            return f"Based on the indexed documents, here is relevant information:\n\n{context}"
+            return {
+                "answer": f"Based on the indexed documents, here is relevant information:\n\n{context}",
+                "model": "fallback-context",
+                "chunks": context_chunks,
+                "context": context
+            }

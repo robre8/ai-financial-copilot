@@ -7,6 +7,10 @@ class QuestionRequest(BaseModel):
 
 class QuestionResponse(BaseModel):
     answer: str
+    model: str
+    chunks: list[str]
+    chunk_count: int
+    context: str
 
 class DebugPromptRequest(BaseModel):
     prompt: str

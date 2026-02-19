@@ -26,18 +26,20 @@ git clone https://github.com/robre8/ai-financial-copilot.git
 cd ai-financial-copilot
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 2. **Configure Environment**
 ```bash
-# Create .env file with your API tokens
-echo "HF_TOKEN=your_huggingface_token_here" > .env
-echo "GROQ_API_KEY=your_groq_api_key_here" >> .env
+# Create backend/.env file with your API tokens
+echo "HF_TOKEN=your_huggingface_token_here" > backend/.env
+echo "GROQ_API_KEY=your_groq_api_key_here" >> backend/.env
+echo "FRONTEND_ORIGINS=http://localhost:5173" >> backend/.env
 ```
 
 3. **Run Server**
 ```bash
+cd backend
 uvicorn app.main:app --reload
 ```
 
@@ -75,7 +77,7 @@ Content-Type: application/json
 
 {"question": "What are the company's quarterly earnings?"}
 ```
-Response: `{"answer": "Based on the indexed documents, ..."}`
+Response: `{"answer": "...", "model": "llama-3.1-8b-instant", "chunk_count": 3, "context": "..."}`
 
 ### Debug LLM (for testing)
 ```bash
@@ -84,7 +86,7 @@ Content-Type: application/json
 
 {"prompt": "Summarize this document..."}
 ```
-Response: `{"result": "...", "status": 200}`
+Response: `{"result": "...", "model": "llama-3.1-8b-instant", "status": 200}`
 
 ## Architecture
 
@@ -119,6 +121,7 @@ Response to User
 - **PDF Processing**: PyPDF
 - **Text Chunking**: Custom text splitter (512 tokens/chunk, 100 token overlap)
 - **Deployment**: Docker + Render (free tier, 512MB RAM)
+- **Frontend**: React + Vite + Tailwind CSS
 - **Optimization**: Memory limits, garbage collection, vector store pruning
 
 ## Environment Variables
@@ -126,6 +129,7 @@ Response to User
 ```bash
 HF_TOKEN=hf_your_token_here         # Required: Huggingface API token for embeddings
 GROQ_API_KEY=gsk_your_key_here      # Required: Groq API key for LLM generation
+FRONTEND_ORIGINS=http://localhost:5173,https://your-vercel-app.vercel.app
 ```
 
 Get your tokens at:
@@ -169,6 +173,8 @@ The application is currently deployed on Render with automatic deployments on gi
 - Environment: Free tier (512MB RAM)
 - Auto-rebuild: On git push to main
 - Memory-optimized: Single worker, 10 concurrent requests
+ - Build: `pip install -r backend/requirements.txt`
+ - Start: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 10`
 
 To deploy:
 1. Push to GitHub `main` branch
@@ -192,34 +198,38 @@ To deploy:
 - Maximum tested with files up to 50MB
 - System extracts text using PyPDF2
 
+### CORS Issues
+- Set `FRONTEND_ORIGINS` to your Vercel URL (and local dev URL)
+- Example: `FRONTEND_ORIGINS=http://localhost:5173,https://your-vercel-app.vercel.app`
+
 ## Project Structure
 
 ```
 .
-├── app/
-│   ├── api/
-│   │   └── routes.py          # FastAPI endpoints
-│   ├── services/
-│   │   ├── llm_service.py     # LLM inference
-│   │   ├── embedding_service.py  # Embeddings generation
-│   │   ├── vector_store_service.py  # FAISS vector DB
-│   │   ├── pdf_service.py     # PDF extraction
-│   │   └── rag_service.py     # RAG orchestration
-│   ├── core/
-│   │   ├── config.py          # Configuration
-│   │   └── logger.py          # Logging setup
-│   ├── schemas/
-│   │   └── rag_schema.py      # API schemas
-│   ├── utils/
-│   │   └── text_splitter.py   # Text chunking
-│   ├── database.py            # DB setup
-│   ├── models.py              # Data models
-│   └── main.py                # FastAPI app
-├── test/
-│   └── test_rag.py            # Integration tests
-├── requirements.txt           # Dependencies
-├── Dockerfile                 # Container config
-├── render.yaml               # Render deployment config
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── routes.py          # FastAPI endpoints
+│   │   ├── services/
+│   │   │   ├── llm_service.py     # LLM inference
+│   │   │   ├── embedding_service.py  # Embeddings generation
+│   │   │   ├── vector_store_service.py  # FAISS vector DB
+│   │   │   ├── pdf_service.py     # PDF extraction
+│   │   │   └── rag_service.py     # RAG orchestration
+│   │   ├── core/
+│   │   │   ├── config.py          # Configuration
+│   │   │   └── logger.py          # Logging setup
+│   │   ├── schemas/
+│   │   │   └── rag_schema.py      # API schemas
+│   │   ├── utils/
+│   │   │   └── text_splitter.py   # Text chunking
+│   │   ├── database.py            # DB setup
+│   │   ├── models.py              # Data models
+│   │   └── main.py                # FastAPI app
+│   ├── requirements.txt           # Backend dependencies
+│   └── Dockerfile                 # Backend container config
+├── ai-copilot-frontend/           # React frontend (Vite + Tailwind)
+├── render.yaml                    # Render deployment config
 └── README.md
 ```
 

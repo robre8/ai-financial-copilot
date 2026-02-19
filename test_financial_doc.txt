@@ -1,0 +1,15 @@
+This is a sample financial document for testing.
+
+Financial Analysis Report
+
+The company's quarterly revenue increased by 15% year-over-year, reaching $5.2 billion. 
+
+Operating expenses were reduced by 8% through efficiency improvements, resulting in a net income of $1.1 billion.
+
+The earnings per share (EPS) was $2.45, exceeding analyst expectations of $2.10.
+
+Cash reserves increased to $8.9 billion, providing strong liquidity for future investments.
+
+The management projects continued growth of 12-15% in the next fiscal year, with planned expansion into three new markets.
+
+Return on equity improved to 18.5%, up from 16.2% in the previous quarter.
