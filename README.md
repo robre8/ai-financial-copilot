@@ -244,6 +244,27 @@ ai-financial-copilot/ (monorepo)
    (LLM Gen)     (Embeddings)
 ```
 
+## 🧠 Design Decisions
+
+**Why FAISS instead of Pinecone?**
+- Chosen for zero-cost, in-memory performance within the 512MB constraint.
+
+**Why Groq instead of OpenAI?**
+- Faster inference speed and a generous free tier for prototyping.
+
+**Why custom RAG instead of LangChain?**
+- More control over memory usage and orchestration logic.
+
+**Why 384-dim embeddings?**
+- Good balance between semantic quality and memory footprint.
+
+## ⚠️ Known Limitations
+
+- FAISS index is in-memory and resets on container restart.
+- No authentication or rate limiting (demo purposes).
+- Single-document session model.
+- Scanned PDFs without selectable text are not supported (no OCR).
+
 ## 🔐 Environment Variables
 
 ### Backend (`backend/.env`)
