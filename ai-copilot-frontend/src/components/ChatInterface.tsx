@@ -223,7 +223,7 @@ export default function ChatInterface() {
           )}
 
           {/* Messages */}
-          <div className="space-y-4 mb-8">
+          <div className="space-y-4 pb-96">
             {messages.map((msg) => (
               <div key={msg.id} className="animate-fadeIn">
                 {/* User Question */}
@@ -271,7 +271,12 @@ export default function ChatInterface() {
                         {(msg.chunks.length > 0 || msg.context) && (
                           <div className="mt-2">
                             <button
-                              onClick={() => setExpandedMessage(expandedMessage === msg.id ? null : msg.id)}
+                              onClick={() => {
+                                setExpandedMessage(expandedMessage === msg.id ? null : msg.id);
+                                if (expandedMessage !== msg.id) {
+                                  setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                                }
+                              }}
                               className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                             >
                               {expandedMessage === msg.id ? '▼' : '▶'} Show context & details
