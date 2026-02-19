@@ -264,6 +264,8 @@ ai-financial-copilot/ (monorepo)
 - No authentication or rate limiting (demo purposes).
 - Single-document session model.
 - Scanned PDFs without selectable text are not supported (no OCR).
+- No chat/session persistence across deployments (in-memory only).
+- No streaming responses (answers are returned after full generation).
 
 ## 🔐 Environment Variables
 
