@@ -93,7 +93,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          cache-dependency-path: ai-copilot-frontend/package-lock.json
       
       - name: Install dependencies
         run: |
