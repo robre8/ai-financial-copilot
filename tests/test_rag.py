@@ -74,7 +74,7 @@ class TestRAGService:
         assert result["model"] == "llama-3.1-8b-instant"
         assert len(result["chunks"]) == 2
 
-    def test_ask_no_context(self):
+    def test_ask_no_context(self, mock_embedding_service, mock_llm_service):
         """Test asking when no context is available"""
         # Arrange
         query = "What are the quarterly earnings?"
@@ -118,7 +118,7 @@ class TestRAGService:
             
             assert len(emb) == 384, "Embedding should be 384-dimensional"
 
-    def test_empty_question_handling(self):
+    def test_empty_question_handling(self, mock_embedding_service, mock_llm_service):
         """Test that empty or whitespace questions are handled"""
         RAGService.vector_store = MagicMock()
         
