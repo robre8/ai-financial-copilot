@@ -1,6 +1,12 @@
 # 🏢 Enterprise Guide - AI Financial Copilot
 
-> For production deployments, compliance requirements, and advanced configurations. See [README.md](./README.md) for quick start.
+> For production deployments, compliance requirements, and advanced configurations. 
+
+See [README.md](./README.md) for quick start.
+
+> ⚠️ Note:
+> The current open-source version runs with an in-memory FAISS index and demo-level configuration.
+> This document outlines a recommended enterprise-grade architecture for production deployment in regulated environments.
 
 ## 📑 Table of Contents
 

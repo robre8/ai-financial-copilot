@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/robre8/ai-financial-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/robre8/ai-financial-copilot/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Production-ready RAG system for intelligent financial document analysis.**
+**Production-grade Retrieval-Augmented Generation (RAG) microservice for intelligent financial document analysis.**
 
 Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, Huggingface embeddings, and FAISS vector search.
 
@@ -26,6 +26,14 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 **AI/ML**: Groq API (LLMs) + Huggingface (embeddings) + FAISS (vector store)  
 **Database**: FAISS in-memory (PostgreSQL pgvector recommended for production)  
 **Deployment**: Docker + Render (backend) + Vercel (frontend)
+
+## 🔄 CI/CD & Quality
+
+- 20+ unit tests (backend + frontend)
+- GitHub Actions pipeline (test, lint, Docker build)
+- Code coverage reporting
+- Dockerized backend service
+- Automated build validation on every push
 
 ## 📋 Prerequisites
 
