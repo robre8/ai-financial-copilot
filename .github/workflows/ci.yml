@@ -39,11 +39,11 @@ jobs:
         continue-on-error: true
       
       - name: Run unit tests
-        run: |
-          pytest tests/ -v --cov=backend/app --cov-report=xml --cov-report=html
+        run: pytest tests/ -v --cov=backend/app --cov-report=xml --cov-report=html -p no:warnings
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}/backend
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
