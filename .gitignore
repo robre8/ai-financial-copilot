@@ -64,7 +64,6 @@ htmlcov/
 # Build
 dist/
 build/
-.github/copilot-instructions.md
 
 # Frontend
 node_modules/
