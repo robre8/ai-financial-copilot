@@ -50,3 +50,15 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Error generating embedding: {repr(e)}")
             raise RuntimeError(f"Error generating embedding: {repr(e)}")
+
+    def embed_documents(self, texts: list) -> list:
+        """Generate embeddings for a list of documents."""
+        embeddings = []
+        for text in texts:
+            embedding = self.embed_text(text)
+            embeddings.append(embedding)
+        return embeddings
+    
+    def embed_query(self, query: str) -> list:
+        """Generate embedding for a single query."""
+        return self.embed_text(query)

@@ -16,7 +16,7 @@ class Document(Base):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)  # The actual text chunk
     embedding = Column(Vector(384), nullable=False)  # 384-dim for all-MiniLM-L6-v2
-    metadata = Column(JSON, nullable=True)  # Source file, page number, etc.
+    document_metadata = Column(JSON, nullable=True)  # Source file, page number, etc.
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     def __repr__(self):

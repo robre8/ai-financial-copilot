@@ -60,7 +60,7 @@ class VectorService:
                 doc = Document(
                     content=text,
                     embedding=embedding,
-                    metadata=metadata
+                    document_metadata=metadata
                 )
                 db.add(doc)
                 db.flush()  # Get the ID
@@ -103,21 +103,24 @@ class VectorService:
         try:
             # pgvector cosine distance query
             # Using <=> operator for cosine distance (1 - cosine_similarity)
+            # Convert embedding list to string format that pgvector accepts
+            embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+            
             sql = text("""
                 SELECT 
                     id,
                     content,
-                    metadata,
-                    1 - (embedding <=> :query_embedding) as similarity
+                    document_metadata,
+                    1 - (embedding <=> CAST(:query_embedding as vector)) as similarity
                 FROM documents
-                ORDER BY embedding <=> :query_embedding
+                ORDER BY embedding <=> CAST(:query_embedding as vector)
                 LIMIT :k
             """)
             
             result = db.execute(
                 sql,
                 {
-                    "query_embedding": query_embedding,
+                    "query_embedding": embedding_str,
                     "k": k
                 }
             )
@@ -127,7 +130,7 @@ class VectorService:
                 documents.append({
                     "id": row.id,
                     "content": row.content,
-                    "metadata": row.metadata or {},
+                    "metadata": row.document_metadata or {},
                     "score": float(row.similarity)
                 })
             
