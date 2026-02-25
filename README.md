@@ -4,7 +4,7 @@
 
 **Production-grade Retrieval-Augmented Generation (RAG) microservice for intelligent financial document analysis.**
 
-Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, Huggingface embeddings, and FAISS vector search.
+Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, Huggingface embeddings, and PostgreSQL pgvector search.
 
 **🚀 [Try Live Demo](https://ai-financial-copilot-bdtd.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-2.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
 
@@ -23,9 +23,9 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 
 **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS  
 **Backend**: FastAPI + Python 3.11 + Uvicorn  
-**AI/ML**: Groq API (LLMs) + Huggingface (embeddings) + FAISS (vector store)  
-**Database**: FAISS in-memory (PostgreSQL pgvector recommended for production)  
-**Deployment**: Docker + Render (backend) + Vercel (frontend)
+**AI/ML**: Groq API (LLMs) + Huggingface (embeddings)  
+**Database**: PostgreSQL + pgvector (persistent vector storage)  
+**Deployment**: Docker Compose + Render (backend) + Vercel (frontend)
 
 ## 🔄 CI/CD & Quality
 
@@ -82,6 +82,27 @@ npm run dev
 ```
 
 Open http://localhost:5173 and start uploading PDFs!
+
+### Run with Docker Compose (Recommended)
+
+```bash
+# Start PostgreSQL + Backend
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+
+# Stop services
+docker-compose down
+```
+
+**Includes**:
+- PostgreSQL 15 with pgvector extension
+- Persistent volume for data
+- Auto-created database and tables
+- Hot-reload for development
+
+See [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) for production setup with Render.
 
 ## 📡 API Endpoints
 
@@ -146,19 +167,32 @@ For enterprise JWT/OAuth2 integration, see [ENTERPRISE.md](./ENTERPRISE.md).
 ai-financial-copilot/
 ├── backend/                          # FastAPI server
 │   ├── app/
-│   │   ├── api/routes.py             # Endpoints
-│   │   ├── services/                 # Business logic (RAG, LLM, embeddings)
-│   │   ├── core/config.py            # Configuration
+│   │   ├── api/routes.py             # REST endpoints
+│   │   ├── services/
+│   │   │   ├── vector_service.py     # PostgreSQL + pgvector
+│   │   │   ├── llm_service.py        # Groq LLM with retry logic
+│   │   │   ├── embedding_service.py  # Huggingface embeddings
+│   │   │   ├── rag_service.py        # RAG orchestration
+│   │   │   └── agent_service.py      # Future: AI agents
+│   │   ├── core/
+│   │   │   ├── config.py             # Settings
+│   │   │   ├── security.py           # API key auth
+│   │   │   └── rate_limit.py         # Rate limiting
+│   │   ├── models.py                 # SQLAlchemy models
+│   │   ├── database.py               # DB connection
 │   │   └── utils/text_splitter.py    # Chunking
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── ai-copilot-frontend/              # React app
 │   ├── src/components/ChatInterface.tsx
-│   ├── package.json
 │   └── vite.config.ts
-├── tests/                            # 20+ unit tests
-├── .github/workflows/ci.yml          # GitHub Actions
-└── ENTERPRISE.md                     # Enterprise setup guide
+├── tests/
+│   ├── test_api.py                   # Unit tests
+│   └── test_integration.py           # Integration tests
+├── docker-compose.yml                # PostgreSQL + Backend
+├── init-db.sql                       # Database initialization
+├── POSTGRESQL_SETUP.md               # Database setup guide
+└── ENTERPRISE.md                     # Enterprise guide
 ```
 
 ## 🏗️ How It Works
@@ -170,31 +204,33 @@ Text extraction + Chunking (512 tokens)
     ↓
 Huggingface: Generate 384-dim embeddings per chunk
     ↓
-FAISS: Store vectors in in-memory index
+PostgreSQL + pgvector: Store vectors persistently
     ↓
 User asks question
     ↓
-Semantic search: Retrieve top-3 similar chunks
+Cosine similarity search: Retrieve top-3 similar chunks
     ↓
-Groq LLM: Generate answer from context
+Groq LLM: Generate answer from context (with retry logic)
     ↓
 Return answer + model info + source chunks
 ```
 
 ## 🧠 Design Decisions
 
-- **FAISS** over Pinecone: Zero-cost, in-memory, perfect for prototypes
+- **PostgreSQL + pgvector** over FAISS: Persistent storage, production-ready, survives restarts
 - **Groq** over OpenAI: 10x faster inference, generous free tier
 - **Custom RAG** over LangChain: Lower memory footprint, full control
-- **Docker + GitHub Actions**: Automated testing and CI/CD out-of-the-box
+- **Clean Architecture**: Separated services (vector, llm, embeddings, agent)
+- **Docker Compose**: Local dev environment with PostgreSQL
+- **GitHub Actions**: Automated testing and CI/CD
 
 ## ⚠️ Limitations
 
-- Vector store is **in-memory** (resets on restart) → use `ENTERPRISE.md` for PostgreSQL setup
-- **No authentication** (demo purposes) → see `ENTERPRISE.md` for auth patterns
-- **Single document** session model → extend for multi-doc support
+- **Requires PostgreSQL**: Need Docker or local PostgreSQL with pgvector extension
+- **Single tenant**: No multi-user isolation (extend with tenant_id in metadata)
 - **Scanned PDFs** not supported (no OCR)
 - **No streaming** responses (full generation then return)
+- **Agent service**: Placeholder only (future: multi-step reasoning)
 
 ## ⚙️ Configuration
 
@@ -204,7 +240,11 @@ Return answer + model info + source chunks
 ```
 HF_TOKEN=hf_xxxxx              # Huggingface token for embeddings
 GROQ_API_KEY=gsk_xxxxx         # Groq API key for LLM
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_copilot  # PostgreSQL
 FRONTEND_ORIGINS=http://localhost:5173   # CORS origins
+API_KEYS=demo-key-12345:admin:DemoKey    # API authentication
+LLM_TIMEOUT=30                 # LLM timeout in seconds
+MAX_RETRIES=3                  # Retry attempts for LLM
 ```
 
 **Frontend** (`.env.production`):
@@ -231,7 +271,8 @@ Automatic fallback chain (tries in order):
 
 ## 📚 More Information
 
-- **Enterprise setup**: See [ENTERPRISE.md](./ENTERPRISE.md)
+- **PostgreSQL setup**: See [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) for local and Render deployment
+- **Enterprise setup**: See [ENTERPRISE.md](./ENTERPRISE.md) for scaling and multi-tenancy
 - **API docs**: https://ai-financial-copilot-2.onRenderer.com/docs
 - **Issues**: GitHub Issues
 
@@ -241,4 +282,4 @@ MIT License - see LICENSE file
 
 ---
 
-**Made with ❤️ using Groq, Huggingface, and FAISS**
+**Made with ❤️ using Groq, Huggingface, PostgreSQL + pgvector**

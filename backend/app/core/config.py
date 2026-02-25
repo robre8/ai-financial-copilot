@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     # 🔹 Frontend origins for CORS (comma-separated)
     FRONTEND_ORIGINS: str = "http://localhost:5173"
     
-    # 🔐 API Keys (comma-separated: key:scope:name format)
+    # � Database URL for PostgreSQL + pgvector
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/ai_copilot"
+    
+    # �🔐 API Keys (comma-separated: key:scope:name format)
     # Example: "abc123:admin:DevKey,xyz789:read:DemoKey"
     API_KEYS: str = "demo-key-12345:admin:Demo"
     

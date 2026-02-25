@@ -39,7 +39,6 @@ def root():
 
 
 @router.post("/upload-pdf")
-@limiter.limit("10/minute")
 async def upload_pdf(
     request: Request,
     file: UploadFile = File(...),
@@ -67,8 +66,7 @@ async def upload_pdf(
         # Procesar documento
         RAGService.process_document(file_location)
 
-        # Guardar vector store (crítico)
-        RAGService.vector_store.save()
+        # PostgreSQL persists automatically - no need to manually save
         
         # 🔹 Explicit memory cleanup
         gc.collect()
@@ -90,10 +88,9 @@ async def upload_pdf(
 
 
 @router.post("/ask", response_model=QuestionResponse)
-@limiter.limit("10/minute")
 def ask_question(
-    http_request: Request,
     request: QuestionRequest,
+    http_request: Request,
     key_data: dict = Security(validate_api_key)
 ):
     # Check API key first
@@ -124,7 +121,6 @@ def ask_question(
 
 
 @router.post("/debug/llm-raw")
-@limiter.limit("5/minute")
 def debug_llm_raw(
     http_request: Request,
     request: DebugPromptRequest,

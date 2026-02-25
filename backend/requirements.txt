@@ -43,6 +43,7 @@ ormsgpack==1.12.2
 packaging==26.0
 pillow==12.1.1
 psycopg2-binary==2.9.11
+pgvector==0.3.6
 pydantic==2.12.5
 pydantic-settings==2.13.0
 pydantic_core==2.41.5
