@@ -28,7 +28,9 @@ TEST_DATABASE_URL = os.getenv(
 
 # Fallback to SQLite if PostgreSQL not available
 try:
-    test_engine = create_engine(TEST_DATABASE_URL, connect_args={"timeout": 2})
+    # PostgreSQL uses connect_timeout, SQLite uses timeout
+    connect_args = {"connect_timeout": 5} if "postgresql" in TEST_DATABASE_URL else {"timeout": 5}
+    test_engine = create_engine(TEST_DATABASE_URL, connect_args=connect_args)
     with test_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     engine = test_engine
@@ -185,7 +187,6 @@ class TestIntegrationRAGPipeline:
         # (documents may persist from previous test runs)
         assert "answer" in data or "no relevant information" in data["answer"].lower()
     
-    @pytest.mark.skip(reason="Requires actual database with pgvector - SQLite doesn't support vector operations")
     def test_full_rag_pipeline(self, auth_headers):
         """
         Test complete RAG pipeline: upload PDF, then ask questions.
@@ -450,7 +451,7 @@ class TestPersistence:
         doc = Document(
             content="Test content",
             embedding=[0.1] * 384,
-            metadata={"key": "value", "nested": {"data": 123}}
+            document_metadata={"key": "value", "nested": {"data": 123}}
         )
         db.add(doc)
         db.commit()
