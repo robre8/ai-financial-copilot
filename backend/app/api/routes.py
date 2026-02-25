@@ -203,7 +203,7 @@ def analyze_financial_document(
 @limiter.limit("10/minute")
 async def webhook_analysis_complete(
     request: Request,
-    key_data: dict = Security(validate_api_key)
+    user_data: dict = Security(verify_firebase_token)
 ):
     """
     Webhook endpoint for analysis completion notifications.
