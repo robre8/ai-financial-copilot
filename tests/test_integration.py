@@ -1,27 +1,45 @@
 """
 Integration Tests - Test full RAG pipeline with FastAPI TestClient
 Tests document upload, vector storage, and query answering end-to-end.
+Supports both SQLite (default) and PostgreSQL with pgvector (if available).
 """
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import io
+import os
+import logging
 
 from app.main import app
 from app.models import Base, Document
 from app.database import get_db
 from app.core.config import settings
 
-# Test database URL (use in-memory SQLite for fast tests)
-TEST_DATABASE_URL = "sqlite:///:memory:"
+logger = logging.getLogger(__name__)
 
-# Create test engine and session
-engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+# Determine database URL based on environment
+# Priority: TEST_DATABASE_URL env var → POSTGRESQL (default)
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/ai_copilot_test"
 )
+
+# Fallback to SQLite if PostgreSQL not available
+try:
+    test_engine = create_engine(TEST_DATABASE_URL, connect_args={"timeout": 2})
+    test_engine.execute(text("SELECT 1"))
+    engine = test_engine
+    logger.info(f"✅ Using database: {TEST_DATABASE_URL[:50]}...")
+except Exception as e:
+    logger.warning(f"⚠️ PostgreSQL not available, using SQLite: {e}")
+    TEST_DATABASE_URL = "sqlite:///:memory:"
+    engine = create_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -47,6 +65,16 @@ app.state.limiter.enabled = False
 @pytest.fixture(scope="function", autouse=True)
 def setup_database():
     """Create fresh database tables for each test."""
+    # Create pgvector extension if using PostgreSQL
+    if "postgresql" in TEST_DATABASE_URL:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+                logger.info("✅ pgvector extension enabled")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not enable pgvector: {e}")
+    
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -226,43 +254,204 @@ class TestIntegrationRAGPipeline:
 
 
 class TestVectorService:
-    """Test vector service operations (unit tests)."""
+    """Test vector service operations with PostgreSQL + pgvector."""
     
-    @pytest.mark.skip(reason="Requires PostgreSQL with pgvector")
-    def test_add_and_search_documents(self):
-        """Test adding documents and searching for similar ones."""
-        from app.services.vector_service import VectorService
+    def test_vector_service_initialization(self):
+        """Test that VectorService initializes correctly."""
+        from app.services.vector_service import get_vector_service
         
-        vector_service = VectorService()
+        vector_service = get_vector_service()
+        assert vector_service is not None
+        logger.info("✅ VectorService initialized")
+    
+    def test_add_documents_basic(self):
+        """Test adding documents to vector store."""
+        from app.services.vector_service import get_vector_service
         
-        # Add test documents
+        vector_service = get_vector_service()
+        
         texts = [
-            "The company revenue was $150 million in Q3 2025.",
-            "Net income reached $45 million this quarter.",
-            "Operating expenses totaled $75 million."
+            "The revenue was $150 million in Q3 2025",
+            "Operating expenses totaled $75 million",
+            "Net income reached $45 million"
         ]
+        
         doc_ids = vector_service.add_documents(texts)
         
         assert len(doc_ids) == 3
-        
-        # Search for similar documents
-        results = vector_service.similarity_search("What was the revenue?", k=2)
-        
-        assert len(results) <= 2
-        assert results[0]["content"] in texts
-        assert "score" in results[0]
+        assert all(isinstance(doc_id, int) for doc_id in doc_ids)
+        logger.info(f"✅ Added {len(doc_ids)} documents")
     
-    @pytest.mark.skip(reason="Requires PostgreSQL with pgvector")
-    def test_vector_service_stats(self):
-        """Test getting vector store statistics."""
-        from app.services.vector_service import VectorService
+    def test_add_documents_with_metadata(self):
+        """Test adding documents with JSONB metadata."""
+        from app.services.vector_service import get_vector_service
         
-        vector_service = VectorService()
+        vector_service = get_vector_service()
+        
+        texts = ["Financial report Q3 2025"]
+        metadatas = [{"source": "report.pdf", "page": 1, "chunk_index": 0}]
+        
+        doc_ids = vector_service.add_documents(texts, metadatas)
+        
+        assert len(doc_ids) == 1
+        logger.info(f"✅ Added document with metadata: {metadatas[0]}")
+    
+    @pytest.mark.skipif(
+        "postgresql" not in TEST_DATABASE_URL,
+        reason="Requires PostgreSQL with pgvector"
+    )
+    def test_vector_store_stats(self):
+        """Test getting vector store statistics."""
+        from app.services.vector_service import get_vector_service
+        
+        vector_service = get_vector_service()
+        
+        # Add some documents
+        texts = ["Document 1", "Document 2", "Document 3"]
+        vector_service.add_documents(texts)
+        
+        # Get stats
         stats = vector_service.get_stats()
         
         assert "document_count" in stats
-        assert "backend" in stats
+        assert stats["document_count"] == 3
         assert stats["backend"] == "PostgreSQL + pgvector"
+        assert stats["embedding_dimension"] == 384
+        logger.info(f"✅ Vector store stats: {stats}")
+    
+    @pytest.mark.skipif(
+        "postgresql" not in TEST_DATABASE_URL,
+        reason="Requires PostgreSQL with pgvector"
+    )
+    def test_similarity_search_with_pgvector(self):
+        """Test similarity search using pgvector cosine distance."""
+        from app.services.vector_service import get_vector_service
+        
+        vector_service = get_vector_service()
+        
+        # Add documents
+        texts = [
+            "The company revenue was $150 million",
+            "Operating expenses were $75 million",
+            "Net profit was $45 million"
+        ]
+        vector_service.add_documents(texts)
+        
+        # Search for revenue-related content
+        results = vector_service.similarity_search("What was the revenue?", k=2)
+        
+        assert len(results) <= 2
+        assert all("content" in r for r in results)
+        assert all("score" in r for r in results)
+        assert all("metadata" in r for r in results)
+        logger.info(f"✅ Found {len(results)} similar documents")
+    
+    def test_document_model_jsonb_metadata(self):
+        """Test Document model with JSONB metadata."""
+        from app.database import SessionLocal
+        
+        db = SessionLocal()
+        
+        # Create document with complex metadata
+        doc = Document(
+            content="Test financial data",
+            embedding=[0.1] * 384,  # Mock embedding
+            metadata={
+                "source": "financial_report.pdf",
+                "page": 2,
+                "section": "Revenue Analysis",
+                "chunk_index": 5,
+                "confidence": 0.95
+            }
+        )
+        
+        db.add(doc)
+        db.commit()
+        
+        # Retrieve and verify
+        retrieved = db.query(Document).first()
+        assert retrieved.metadata["source"] == "financial_report.pdf"
+        assert retrieved.metadata["page"] == 2
+        assert retrieved.metadata["confidence"] == 0.95
+        
+        db.close()
+        logger.info("✅ Document with JSONB metadata persisted correctly")
+    
+    def test_clear_all_documents(self):
+        """Test clearing all documents from vector store."""
+        from app.services.vector_service import get_vector_service
+        
+        vector_service = get_vector_service()
+        
+        # Add documents
+        texts = ["Doc1", "Doc2", "Doc3"]
+        vector_service.add_documents(texts)
+        
+        # Clear
+        count = vector_service.clear_all()
+        
+        assert count == 3
+        
+        # Verify empty
+        stats = vector_service.get_stats()
+        assert stats["document_count"] == 0
+        logger.info(f"✅ Cleared {count} documents")
+
+
+class TestPersistence:
+    """Test data persistence in PostgreSQL."""
+    
+    @pytest.mark.skipif(
+        "postgresql" not in TEST_DATABASE_URL,
+        reason="Requires PostgreSQL for persistence test"
+    )
+    def test_documents_persist_in_database(self):
+        """Test that documents persist in PostgreSQL across connections."""
+        from app.database import SessionLocal
+        from app.services.vector_service import get_vector_service
+        
+        vector_service = get_vector_service()
+        
+        # Add document
+        texts = ["Persisted document content"]
+        doc_ids = vector_service.add_documents(texts)
+        
+        # Create new database connection
+        db = SessionLocal()
+        count = db.query(Document).count()
+        db.close()
+        
+        assert count == 1
+        logger.info("✅ Documents persisted in PostgreSQL")
+    
+    @pytest.mark.skipif(
+        "postgresql" not in TEST_DATABASE_URL,
+        reason="Requires PostgreSQL for persistence test"
+    )
+    def test_metadata_persistence(self):
+        """Test that JSONB metadata persists correctly."""
+        from app.database import SessionLocal
+        
+        # Add via raw insert
+        db = SessionLocal()
+        doc = Document(
+            content="Test content",
+            embedding=[0.1] * 384,
+            metadata={"key": "value", "nested": {"data": 123}}
+        )
+        db.add(doc)
+        db.commit()
+        doc_id = doc.id
+        db.close()
+        
+        # Retrieve in new connection
+        db = SessionLocal()
+        retrieved = db.query(Document).filter(Document.id == doc_id).first()
+        db.close()
+        
+        assert retrieved is not None
+        assert retrieved.metadata["nested"]["data"] == 123
+        logger.info("✅ JSONB metadata persisted correctly")
 
 
 if __name__ == "__main__":
