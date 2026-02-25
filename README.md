@@ -17,7 +17,7 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 | **Fast API** | FastAPI REST endpoints with CORS + error handling |
 | **Modern UI** | React 18 + Tailwind CSS with dark mode & animations |
 | **Production Ready** | Docker, tests, CI/CD, and monitoring included |
-| **Zero Auth** | Quick demo setup (enterprise auth in `ENTERPRISE.md`) |
+| **Secure** | API key auth + rate limiting + retry logic |
 
 ## 🛠️ Tech Stack
 
@@ -64,6 +64,7 @@ cat > backend/.env << EOF
 HF_TOKEN=your_token_here
 GROQ_API_KEY=your_key_here
 FRONTEND_ORIGINS=http://localhost:5173
+API_KEYS=demo-key-12345:admin:DemoKey
 EOF
 
 # Run backend (in one terminal)
@@ -92,6 +93,52 @@ POST /debug/llm-raw       # Test LLM endpoint (dev only)
 ```
 
 **Full API docs**: http://localhost:8000/docs (when running locally)
+
+## 🔐 Security
+
+All endpoints (except `/`) are protected with **API key authentication** and **rate limiting**.
+
+### API Key Authentication
+
+Include your API key in the `X-API-Key` header:
+
+```bash
+curl -X POST "http://localhost:8000/upload-pdf" \
+  -H "X-API-Key: demo-key-12345" \
+  -F "file=@document.pdf"
+```
+
+### API Key Scopes
+
+| Scope | Permissions | Use Case |
+|-------|-------------|----------|
+| `read` | Query documents (`/ask`) | Read-only access |
+| `write` | Upload + query (`/upload-pdf`, `/ask`) | Content contributors |
+| `admin` | All endpoints + debug | Full system access |
+
+### Rate Limiting
+
+- **Default limit**: 10 requests/minute per API key
+- **Debug endpoint**: 5 requests/minute
+- Exceeding limits returns `429 Too Many Requests`
+
+### Configuration
+
+Set API keys in `backend/.env`:
+
+```bash
+# Format: key:scope:name (comma-separated)
+API_KEYS=demo-key-12345:admin:DemoKey,prod-key-xyz:read:ReadOnlyKey
+```
+
+### Retry & Timeout Strategy
+
+LLM requests automatically retry on failures:
+- **Max retries**: 3 attempts
+- **Backoff**: Exponential (1s → 2s → 4s)
+- **Timeout**: 30 seconds (configurable via `LLM_TIMEOUT`)
+
+For enterprise JWT/OAuth2 integration, see [ENTERPRISE.md](./ENTERPRISE.md).
 
 ## 📁 Project Structure
 

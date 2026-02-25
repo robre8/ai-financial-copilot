@@ -8,7 +8,15 @@ from app.schemas.rag_schema import QuestionRequest
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI app"""
+    # Disable rate limiting for tests
+    app.state.limiter.enabled = False
     return TestClient(app)
+
+
+@pytest.fixture
+def auth_headers():
+    """Return authentication headers with valid API key"""
+    return {"X-API-Key": "demo-key-12345"}
 
 
 class TestAPIEndpoints:
@@ -36,7 +44,7 @@ class TestAPIEndpoints:
 
     @patch('app.api.routes.RAGService')
     @patch('app.api.routes.settings')
-    def test_ask_question_success(self, mock_settings, mock_rag_service, client):
+    def test_ask_question_success(self, mock_settings, mock_rag_service, client, auth_headers):
         """Test asking a question successfully"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -52,7 +60,7 @@ class TestAPIEndpoints:
         }
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 200
@@ -62,7 +70,7 @@ class TestAPIEndpoints:
         assert len(data["chunks"]) == 1
 
     @patch('app.api.routes.settings')
-    def test_ask_question_empty_question(self, mock_settings, client):
+    def test_ask_question_empty_question(self, mock_settings, client, auth_headers):
         """Test that empty questions are rejected"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -72,14 +80,14 @@ class TestAPIEndpoints:
         }
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 400
 
     @patch('app.api.routes.RAGService')
     @patch('app.api.routes.settings')
-    def test_ask_question_response_format(self, mock_settings, mock_rag_service, client):
+    def test_ask_question_response_format(self, mock_settings, mock_rag_service, client, auth_headers):
         """Test that response follows QuestionResponse schema"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -93,7 +101,7 @@ class TestAPIEndpoints:
         payload = {"question": "test question"}
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 200
@@ -105,7 +113,7 @@ class TestAPIEndpoints:
         assert "chunk_count" in data
 
     @patch('app.api.routes.settings')
-    def test_ask_question_missing_api_key(self, mock_settings, client):
+    def test_ask_question_missing_api_key(self, mock_settings, client, auth_headers):
         """Test that requests fail gracefully when API key is missing"""
         # Arrange
         mock_settings.validate.side_effect = ValueError("API key not configured")
@@ -113,14 +121,14 @@ class TestAPIEndpoints:
         payload = {"question": "What are earnings?"}
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 500
 
     @patch('app.api.routes.RAGService')
     @patch('app.api.routes.settings')
-    def test_upload_pdf_success(self, mock_settings, mock_rag_service, client):
+    def test_upload_pdf_success(self, mock_settings, mock_rag_service, client, auth_headers):
         """Test successful PDF upload"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -133,7 +141,8 @@ class TestAPIEndpoints:
         # Act
         response = client.post(
             "/upload-pdf",
-            files={"file": ("test.pdf", pdf_content, "application/pdf")}
+            files={"file": ("test.pdf", pdf_content, "application/pdf")},
+            headers=auth_headers
         )
 
         # Assert
@@ -143,7 +152,7 @@ class TestAPIEndpoints:
         assert "indexed" in data.get("message", "").lower()
 
     @patch('app.api.routes.settings')
-    def test_upload_non_pdf_file(self, mock_settings, client):
+    def test_upload_non_pdf_file(self, mock_settings, client, auth_headers):
         """Test that non-PDF files are rejected"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -153,7 +162,8 @@ class TestAPIEndpoints:
         # Act
         response = client.post(
             "/upload-pdf",
-            files={"file": ("test.txt", file_content, "text/plain")}
+            files={"file": ("test.txt", file_content, "text/plain")},
+            headers=auth_headers
         )
 
         # Assert
@@ -161,7 +171,7 @@ class TestAPIEndpoints:
 
     @patch('app.api.routes.settings')
     @patch('app.api.routes.RAGService')
-    def test_upload_empty_pdf(self, mock_rag_service, mock_settings, client):
+    def test_upload_empty_pdf(self, mock_rag_service, mock_settings, client, auth_headers):
         """Test that empty PDF files are rejected"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -169,7 +179,8 @@ class TestAPIEndpoints:
         # Act
         response = client.post(
             "/upload-pdf",
-            files={"file": ("test.pdf", b"", "application/pdf")}
+            files={"file": ("test.pdf", b"", "application/pdf")},
+            headers=auth_headers
         )
 
         # Assert
@@ -177,7 +188,7 @@ class TestAPIEndpoints:
 
     @patch('app.api.routes.settings')
     @patch('app.api.routes.RAGService')
-    def test_upload_pdf_processing_error(self, mock_rag_service, mock_settings, client):
+    def test_upload_pdf_processing_error(self, mock_rag_service, mock_settings, client, auth_headers):
         """Test error handling when PDF processing fails"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -188,7 +199,8 @@ class TestAPIEndpoints:
         # Act
         response = client.post(
             "/upload-pdf",
-            files={"file": ("test.pdf", pdf_content, "application/pdf")}
+            files={"file": ("test.pdf", pdf_content, "application/pdf")},
+            headers=auth_headers
         )
 
         # Assert
@@ -196,7 +208,7 @@ class TestAPIEndpoints:
 
     @patch('app.api.routes.RAGService')
     @patch('app.api.routes.settings')
-    def test_ask_question_with_multiple_chunks(self, mock_settings, mock_rag_service, client):
+    def test_ask_question_with_multiple_chunks(self, mock_settings, mock_rag_service, client, auth_headers):
         """Test that chunk_count matches chunks array length"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -211,7 +223,7 @@ class TestAPIEndpoints:
         payload = {"question": "test question"}
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 200
@@ -220,7 +232,7 @@ class TestAPIEndpoints:
         assert len(data["chunks"]) == 3
 
     @patch('app.api.routes.settings')
-    def test_check_api_key_validation(self, mock_settings, client):
+    def test_check_api_key_validation(self, mock_settings, client, auth_headers):
         """Test that check_api_key is called on requests"""
         # Arrange
         mock_settings.validate.side_effect = ValueError("HF_TOKEN not found")
@@ -228,7 +240,7 @@ class TestAPIEndpoints:
         payload = {"question": "test"}
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 500
@@ -236,7 +248,7 @@ class TestAPIEndpoints:
 
     @patch('app.api.routes.RAGService')
     @patch('app.api.routes.settings')
-    def test_model_indicator_in_response(self, mock_settings, mock_rag_service, client):
+    def test_model_indicator_in_response(self, mock_settings, mock_rag_service, client, auth_headers):
         """Test that model indicator is included in response"""
         # Arrange
         mock_settings.validate.return_value = None
@@ -251,7 +263,7 @@ class TestAPIEndpoints:
         payload = {"question": "test question"}
 
         # Act
-        response = client.post("/ask", json=payload)
+        response = client.post("/ask", json=payload, headers=auth_headers)
 
         # Assert
         assert response.status_code == 200

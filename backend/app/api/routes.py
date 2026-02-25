@@ -2,12 +2,14 @@ import os
 import traceback
 import requests
 import gc
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Security, Request
 from app.services.rag_service import RAGService
 from app.schemas.rag_schema import QuestionRequest, QuestionResponse, DebugPromptRequest
 from app.core.logger import setup_logger
 from app.core.config import settings
 from app.services.llm_service import LLMService
+from app.core.security import validate_api_key, require_scope, APIKeyScope
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 logger = setup_logger()
@@ -37,7 +39,12 @@ def root():
 
 
 @router.post("/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...)):
+@limiter.limit("10/minute")
+async def upload_pdf(
+    request: Request,
+    file: UploadFile = File(...),
+    key_data: dict = Security(require_scope(APIKeyScope.WRITE))
+):
     # Check API key first
     check_api_key()
     
@@ -83,7 +90,12 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 
 @router.post("/ask", response_model=QuestionResponse)
-def ask_question(request: QuestionRequest):
+@limiter.limit("10/minute")
+def ask_question(
+    http_request: Request,
+    request: QuestionRequest,
+    key_data: dict = Security(validate_api_key)
+):
     # Check API key first
     check_api_key()
     
@@ -112,7 +124,12 @@ def ask_question(request: QuestionRequest):
 
 
 @router.post("/debug/llm-raw")
-def debug_llm_raw(request: DebugPromptRequest):
+@limiter.limit("5/minute")
+def debug_llm_raw(
+    http_request: Request,
+    request: DebugPromptRequest,
+    key_data: dict = Security(validate_api_key)
+):
     """Return raw LLM client response for debugging. Use only for diagnostics."""
     check_api_key()
 
