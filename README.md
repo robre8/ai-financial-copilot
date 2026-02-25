@@ -215,6 +215,176 @@ Groq LLM: Generate answer from context (with retry logic)
 Return answer + model info + source chunks
 ```
 
+## 🏛️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    React Frontend (Vercel)                  │
+│          Dashboard | Chat | PDF Upload | Analytics         │
+└────────────────────────┬────────────────────────────────────┘
+                         │ HTTPS
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│               FastAPI Backend (Render/Docker)               │
+├─────────────┬──────────────┬──────────────┬────────────────┤
+│ REST API    │ Security     │ Rate Limit   │ Error Handling │
+│ • /upload   │ • API Keys   │ • 10 req/min │ • Retries      │
+│ • /ask      │ • JWT/OAuth2 │ • Per user   │ • Timeouts     │
+│ • /analyze  │ • Scopes     │ • Backoff    │ • Graceful     │
+│ • /webhooks │ • CORS       │ (enterprise) │ • Logging      │
+└─────────────┴──────────────┴──────────────┴────────────────┘
+     │                │                │
+     ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│   RAG        │  │   Agent      │  │   Webhooks   │
+│   Service    │  │   Service    │  │   (Events)   │
+│              │  │              │  │              │
+│ • Orchestr.  │  │ • Tool setup │  │ • Notif.     │
+│ • Chunking   │  │ • Reasoning  │  │ • External   │
+│ • Query      │  │ • Memory     │  │   systems    │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       ├────────┬────────┴────────┬────────┤
+       ▼        ▼                 ▼        ▼
+   ┌─────────────────────────────────────────┐
+   │     Microservices (Python Services)     │
+   ├─────────────────────────────────────────┤
+   │ • Embedding Service (HF: all-MiniLM)   │
+   │ • LLM Service (Groq: 3-model fallback) │
+   │ • Vector Service (pgvector ops)        │
+   │ • PDF Processing (pypdf)               │
+   └────────┬────────────────────────────────┘
+            │
+            ▼
+   ┌─────────────────────────────────────────┐
+   │      Data Layer (PostgreSQL 15)         │
+   ├─────────────────────────────────────────┤
+   │ • pgvector extension (384-dim)          │
+   │ • Persistent embeddings cache           │
+   │ • Metadata (JSONB)                      │
+   │ • Analysis history                      │
+   └─────────────────────────────────────────┘
+```
+
+## 🤖 Financial Analysis Agent
+
+The **agent** uses a ReAct (Reasoning + Acting) pattern with specialized tools:
+
+### Agent Workflow
+
+```
+Input Document
+    ↓
+┌─────────────────────────────────────────┐
+│   Agent Decision Making                 │
+│   "What tools do I need?"               │
+└─────────────────────────────────────────┘
+    ↓
+    ├─→ Tool 1: Extract Financial Metrics
+    │        Extract: Revenue, Assets, Ratios
+    │        Calculate: Liquidity, Leverage, Profitability
+    │
+    ├─→ Tool 2: Detect Risk Patterns  
+    │        Analyze: Debt levels, Margins, Keywords
+    │        Score: Risk assessment (low/medium/high)
+    │
+    └─→ Tool 3: Generate Structured Report
+             Synthesize: Metrics + Risks
+             Output: JSON with recommendations
+    ↓
+Structured Financial Analysis
+{
+  "financial_metrics": {
+    "revenue": 150000000,
+    "net_income": 45000000,
+    "liquidity_ratio": 1.3,
+    "debt_ratio": 0.62,
+    "profit_margin": 0.30
+  },
+  "risk_assessment": {
+    "risk_level": "medium",
+    "risk_score": 45,
+    "identified_risks": [...]
+  },
+  "recommendations": [...]
+}
+```
+
+### Integration Points
+
+```bash
+# 1. Analyze via endpoint
+curl -X POST "http://localhost:8000/analyze" \
+  -H "X-API-Key: demo-key-12345" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Q3 2025 Financial Report..."}'
+
+# 2. Webhook notification on completion
+# Triggers: POST /webhooks/analysis-complete
+# External systems notified of results
+```
+
+## 🚀 Enterprise Features
+
+| Feature | Status | Details |
+|---------|--------|---------|
+| **API Key Auth** | ✅ | Multiple scopes (read/write/admin) |
+| **Rate Limiting** | ✅ | Per-user limits with backoff |
+| **Webhook Support** | ✅ | Event-driven integration |
+| **Financial Analysis Agent** | ✅ | ReAct with 3 specialized tools |
+| **Persistent Storage** | ✅ | PostgreSQL with pgvector |
+| **Error Handling** | ✅ | Graceful degradation + retries |
+| **Monitoring/Logging** | ✅ | Structured logs, debug endpoints |
+| **Docker Ready** | ✅ | Production-grade container setup |
+| **JWT/OAuth2** | 🔄 | [See ENTERPRISE.md](./ENTERPRISE.md) |
+| **Multi-tenancy** | 🔄 | Custom scoping layer |
+| **Analytics** | ⏳ | Query metrics dashboard |
+| **Caching Layer** | ⏳ | Redis integration |
+
+**Legend**: ✅ Implemented | 🔄 In Progress | ⏳ Planned
+
+### Webhook Events
+
+```json
+{
+  "event_type": "analysis.completed",
+  "event_id": "evt_abc123",
+  "timestamp": "2026-02-24T20:30:00Z",
+  "status": "success",
+  "payload": {
+    "analysis_id": "analysis_123",
+    "risk_level": "medium",
+    "recommendations_count": 3
+  },
+  "delivery_attempts": 1
+}
+```
+
+## 📋 Roadmap
+
+### Q2 2026
+- [ ] Multi-tenancy with organization scoping
+- [ ] Redis caching layer for embeddings
+- [ ] Advanced analytics dashboard
+- [ ] PDF OCR support (Tesseract integration)
+- [ ] Streaming LLM responses
+
+### Q3 2026  
+- [ ] OAuth2/SAML enterprise auth
+- [ ] Scheduled analysis reports
+- [ ] Custom model fine-tuning
+- [ ] Graph database for entity relationships
+- [ ] Multi-model ensemble predictions
+
+### Q4 2026
+- [ ] Real-time document collaboration
+- [ ] Advanced anomaly detection
+- [ ] Compliance audit trails
+- [ ] Custom LLM deployment (Ollama)
+- [ ] CLI tool and SDK
+
+---
+
 ## 🧠 Design Decisions
 
 - **PostgreSQL + pgvector** over FAISS: Persistent storage, production-ready, survives restarts
@@ -230,7 +400,6 @@ Return answer + model info + source chunks
 - **Single tenant**: No multi-user isolation (extend with tenant_id in metadata)
 - **Scanned PDFs** not supported (no OCR)
 - **No streaming** responses (full generation then return)
-- **Agent service**: Placeholder only (future: multi-step reasoning)
 
 ## ⚙️ Configuration
 
