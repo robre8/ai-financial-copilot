@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     
     # � Database URL for PostgreSQL + pgvector
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/ai_copilot"
+
+    # 🔐 Firebase service account JSON (stringified)
+    FIREBASE_SERVICE_ACCOUNT_JSON: Optional[str] = None
     
     # �🔐 API Keys (comma-separated: key:scope:name format)
     # Example: "abc123:admin:DevKey,xyz789:read:DemoKey"

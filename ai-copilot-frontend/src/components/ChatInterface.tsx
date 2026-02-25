@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../auth/AuthContext';
 
 interface ChatMessage {
   id: string;
@@ -17,6 +18,7 @@ interface ChatMessage {
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 export default function ChatInterface() {
+  const { token, user, signOut } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,6 +56,12 @@ export default function ChatInterface() {
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
+
+    if (!token) {
+      setUploadMessage('❌ Inicia sesion para subir archivos');
+      setTimeout(() => setUploadMessage(null), 3000);
+      return;
+    }
     
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       setUploadMessage('❌ Solo se aceptan archivos PDF');
@@ -72,7 +80,10 @@ export default function ChatInterface() {
       const formData = new FormData();
       formData.append('file', file);
       await axios.post(`${API_BASE}/upload-pdf`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
       });
       setUploadMessage(`✅ ${file.name} subido correctamente`);
       setTimeout(() => setUploadMessage(null), 5000);
@@ -94,6 +105,7 @@ export default function ChatInterface() {
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
+    if (!token) return;
 
     const tempQuestion = question;
     setQuestion('');
@@ -114,9 +126,17 @@ export default function ChatInterface() {
     setMessages(prev => [...prev, tempMessage]);
 
     try {
-      const response = await axios.post(`${API_BASE}/ask`, {
-        question: tempQuestion,
-      });
+      const response = await axios.post(
+        `${API_BASE}/ask`,
+        {
+          question: tempQuestion,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = response.data;
       setMessages(prev =>
@@ -180,12 +200,26 @@ export default function ChatInterface() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-            >
-              {darkMode ? '☀️' : '🌙'}
-            </button>
+            <div className="flex items-center gap-2">
+              {user?.email && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+              )}
+              <button
+                onClick={async () => {
+                  await signOut();
+                }}
+                className="px-3 py-2 text-xs rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+                title="Sign out"
+              >
+                Sign out
+              </button>
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
+            </div>
           </div>
         </header>
 

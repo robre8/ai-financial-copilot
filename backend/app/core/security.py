@@ -4,15 +4,19 @@ API Key Authentication Middleware
 Provides secure API key validation with scopes (read/write permissions).
 """
 from fastapi import Security, HTTPException, status
-from fastapi.security import APIKeyHeader
+from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 from app.core.logger import setup_logger
 from typing import Optional
+import json
+import firebase_admin
+from firebase_admin import auth as firebase_auth, credentials
 
 logger = setup_logger()
 
 # Header name for API key
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
+BEARER_AUTH = HTTPBearer(auto_error=False)
 
 
 class APIKeyScope:
@@ -57,6 +61,52 @@ def validate_api_key(api_key_header: str = Security(API_KEY_HEADER)) -> dict:
     logger.info(f"API key validated: {key_data.get('name', 'unknown')} (scope: {key_data.get('scope', 'read')})")
     
     return key_data
+
+
+def _init_firebase():
+    if firebase_admin._apps:
+        return
+
+    service_account_json = settings.FIREBASE_SERVICE_ACCOUNT_JSON
+    if not service_account_json:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="FIREBASE_SERVICE_ACCOUNT_JSON is missing",
+        )
+
+    try:
+        credentials_info = json.loads(service_account_json)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="FIREBASE_SERVICE_ACCOUNT_JSON must be valid JSON",
+        )
+
+    cred = credentials.Certificate(credentials_info)
+    firebase_admin.initialize_app(cred)
+
+
+def verify_firebase_token(
+    credentials_data: HTTPAuthorizationCredentials = Security(BEARER_AUTH),
+) -> dict:
+    if not credentials_data or credentials_data.scheme.lower() != "bearer":
+        logger.warning("Missing Bearer token in request")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Bearer token. Include 'Authorization: Bearer <token>' header.",
+        )
+
+    _init_firebase()
+
+    try:
+        decoded_token = firebase_auth.verify_id_token(credentials_data.credentials)
+        return decoded_token
+    except Exception:
+        logger.warning("Invalid Firebase token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
 
 
 def require_scope(required_scope: str):

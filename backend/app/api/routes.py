@@ -11,7 +11,7 @@ from app.schemas.rag_schema import QuestionRequest, QuestionResponse, DebugPromp
 from app.core.logger import setup_logger
 from app.core.config import settings
 from app.services.llm_service import LLMService
-from app.core.security import validate_api_key, require_scope, APIKeyScope
+from app.core.security import verify_firebase_token
 from app.core.rate_limit import limiter
 
 router = APIRouter()
@@ -44,10 +44,11 @@ def root():
 
 
 @router.post("/upload-pdf")
+@limiter.limit("10/minute")
 async def upload_pdf(
     request: Request,
     file: UploadFile = File(...),
-    key_data: dict = Security(require_scope(APIKeyScope.WRITE))
+    user_data: dict = Security(verify_firebase_token)
 ):
     # Check API key first
     check_api_key()
@@ -93,19 +94,20 @@ async def upload_pdf(
 
 
 @router.post("/ask", response_model=QuestionResponse)
+@limiter.limit("10/minute")
 def ask_question(
-    request: QuestionRequest,
-    http_request: Request,
-    key_data: dict = Security(validate_api_key)
+    request: Request,
+    payload: QuestionRequest,
+    user_data: dict = Security(verify_firebase_token)
 ):
     # Check API key first
     check_api_key()
     
     try:
-        if not request.question or len(request.question.strip()) == 0:
+        if not payload.question or len(payload.question.strip()) == 0:
             raise HTTPException(status_code=400, detail="Question cannot be empty")
         
-        result = RAGService.ask(request.question)
+        result = RAGService.ask(payload.question)
         
         # 🔹 Cleanup memory after inference
         gc.collect()
@@ -126,10 +128,11 @@ def ask_question(
 
 
 @router.post("/debug/llm-raw")
+@limiter.limit("10/minute")
 def debug_llm_raw(
-    http_request: Request,
-    request: DebugPromptRequest,
-    key_data: dict = Security(validate_api_key)
+    request: Request,
+    payload: DebugPromptRequest,
+    user_data: dict = Security(verify_firebase_token)
 ):
     """Return raw LLM client response for debugging. Use only for diagnostics."""
     check_api_key()
@@ -137,9 +140,9 @@ def debug_llm_raw(
     try:
         from app.services.llm_service import LLMService
         
-        logger.info("Debug LLM raw: trying models with prompt: %s", request.prompt[:50])
+        logger.info("Debug LLM raw: trying models with prompt: %s", payload.prompt[:50])
         
-        result, model_used = LLMService.generate(request.prompt)
+        result, model_used = LLMService.generate(payload.prompt)
 
         return {"result": result, "model": model_used, "type": str(type(result)), "status": 200}
 
@@ -150,10 +153,11 @@ def debug_llm_raw(
 
 
 @router.post("/analyze")
+@limiter.limit("10/minute")
 def analyze_financial_document(
-    http_request: Request,
-    request: QuestionRequest,
-    key_data: dict = Security(validate_api_key)
+    request: Request,
+    payload: QuestionRequest,
+    user_data: dict = Security(verify_firebase_token)
 ):
     """
     Analyze financial document using Financial Analysis Agent.
@@ -168,7 +172,7 @@ def analyze_financial_document(
     check_api_key()
     
     try:
-        if not request.question or len(request.question.strip()) == 0:
+        if not payload.question or len(payload.question.strip()) == 0:
             raise HTTPException(status_code=400, detail="Document content cannot be empty")
         
         # Get Financial Analysis Agent
@@ -176,7 +180,7 @@ def analyze_financial_document(
         
         # Run analysis
         logger.info("🤖 Starting financial analysis with agent...")
-        analysis_result = agent.analyze(request.question)
+        analysis_result = agent.analyze(payload.question)
         
         # Cleanup
         gc.collect()
@@ -196,8 +200,9 @@ def analyze_financial_document(
 
 
 @router.post("/webhooks/analysis-complete")
+@limiter.limit("10/minute")
 async def webhook_analysis_complete(
-    http_request: Request,
+    request: Request,
     key_data: dict = Security(validate_api_key)
 ):
     """
@@ -215,7 +220,7 @@ async def webhook_analysis_complete(
     
     try:
         # Get webhook payload from request body
-        body = await http_request.json()
+        body = await request.json()
         
         webhook_event = {
             "event_type": "analysis.completed",
