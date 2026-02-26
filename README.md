@@ -6,7 +6,7 @@
 
 Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, Huggingface embeddings, and PostgreSQL pgvector search.
 
-**🚀 [Try Live Demo](https://ai-financial-copilot-bdtd.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-2.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
+**🚀 [Try Live Demo](https://ai-financial-copilot-preview.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-3.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
 
 ## ✨ Key Features
 
@@ -17,14 +17,15 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 | **Fast API** | FastAPI REST endpoints with CORS + error handling |
 | **Modern UI** | React 18 + Tailwind CSS with dark mode & animations |
 | **Production Ready** | Docker, tests, CI/CD, and monitoring included |
-| **Secure** | API key auth + rate limiting + retry logic |
+| **Secure** | Firebase Auth (OAuth2 + JWT) + rate limiting + retry logic |
 
 ## 🛠️ Tech Stack
 
-**Frontend**: React 18 + TypeScript + Vite + Tailwind CSS  
-**Backend**: FastAPI + Python 3.11 + Uvicorn  
+**Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + Firebase Auth  
+**Backend**: FastAPI + Python 3.11 + Uvicorn + Firebase Admin SDK  
 **AI/ML**: Groq API (LLMs) + Huggingface (embeddings)  
 **Database**: PostgreSQL + pgvector (persistent vector storage)  
+**Authentication**: Firebase Auth (Google OAuth2 + Email/Password) + JWT validation  
 **Deployment**: Docker Compose + Render (backend) + Vercel (frontend)
 
 ## 🔄 CI/CD & Quality
@@ -41,11 +42,12 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 - **Node.js 18+** (for local frontend)
 - **Huggingface API Token** ([get here](https://huggingface.co/settings/tokens))
 - **Groq API Key** ([get here](https://console.groq.com/keys))
+- **Firebase Project** ([create here](https://console.firebase.google.com/)) - for authentication
 
 ## 🚀 Quick Start
 
 ### Try Online (Easiest)
-Visit https://ai-financial-copilot-bdtd.vercel.app/, upload a PDF, and start asking questions.
+Visit https://ai-financial-copilot-preview.vercel.app/, sign in with Google or create an account, upload a PDF, and start asking questions.
 
 ### Run Locally (5 minutes)
 
@@ -59,12 +61,12 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r backend/requirements.txt
 
-# Create backend/.env
+# Create backend/.env (Firebase service account JSON required)
 cat > backend/.env << EOF
 HF_TOKEN=your_token_here
 GROQ_API_KEY=your_key_here
 FRONTEND_ORIGINS=http://localhost:5173
-API_KEYS=demo-key-12345:admin:DemoKey
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 EOF
 
 # Run backend (in one terminal)
@@ -73,15 +75,26 @@ cd backend && uvicorn app.main:app --reload
 # Frontend setup (in new terminal)
 cd ai-copilot-frontend
 npm install
+
+# Create .env.local with Firebase config
 cat > .env.local << EOF
 VITE_API_BASE=http://localhost:8000
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 EOF
 
 # Run frontend
 npm run dev
 ```
 
-Open http://localhost:5173 and start uploading PDFs!
+Open http://localhost:5173, sign in, and start uploading PDFs!
+
+**Note**: You'll need to create a Firebase project and configure authentication. See [Authentication Setup](#firebase-setup-required) section.
 
 ### Run with Docker Compose (Recommended)
 
@@ -115,42 +128,53 @@ POST /debug/llm-raw       # Test LLM endpoint (dev only)
 
 **Full API docs**: http://localhost:8000/docs (when running locally)
 
-## 🔐 Security
+## 🔐 Authentication & Security
 
-All endpoints (except `/`) are protected with **API key authentication** and **rate limiting**.
+All endpoints (except `/`) are protected with **Firebase Authentication (OAuth2 + JWT)** and **rate limiting**.
 
-### API Key Authentication
+### Firebase Authentication
 
-Include your API key in the `X-API-Key` header:
+The application uses Firebase Auth for secure user authentication with multiple sign-in methods:
+
+**Supported Methods**:
+- 🔐 **Google OAuth2**: One-click sign-in with Google account
+- 📧 **Email/Password**: Traditional email registration and login
+- 🔄 **JWT Tokens**: Automatic token refresh and validation
+
+**How it works**:
+1. User signs in via frontend (Google or Email/Password)
+2. Firebase returns a JWT ID token
+3. Frontend includes token in `Authorization: Bearer <token>` header
+4. Backend validates token using Firebase Admin SDK
+5. Request is authenticated ✅
+
+### API Authentication
+
+Include your Firebase JWT token in the `Authorization` header:
 
 ```bash
-curl -X POST "http://localhost:8000/upload-pdf" \
-  -H "X-API-Key: demo-key-12345" \
+# First, sign in via the web UI and copy your token
+# Then use it in API requests:
+
+curl -X POST "https://ai-financial-copilot-3.onrender.com/upload-pdf" \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6..." \
   -F "file=@document.pdf"
 ```
 
-### API Key Scopes
+### User Management
 
-| Scope | Permissions | Use Case |
-|-------|-------------|----------|
-| `read` | Query documents (`/ask`) | Read-only access |
-| `write` | Upload + query (`/upload-pdf`, `/ask`) | Content contributors |
-| `admin` | All endpoints + debug | Full system access |
+Firebase Auth provides built-in features:
+- Email verification
+- Password reset
+- Account security
+- Multi-factor authentication (optional)
+- User profile management
 
 ### Rate Limiting
 
-- **Default limit**: 10 requests/minute per API key
+- **Default limit**: 10 requests/minute per authenticated user
 - **Debug endpoint**: 5 requests/minute
 - Exceeding limits returns `429 Too Many Requests`
-
-### Configuration
-
-Set API keys in `backend/.env`:
-
-```bash
-# Format: key:scope:name (comma-separated)
-API_KEYS=demo-key-12345:admin:DemoKey,prod-key-xyz:read:ReadOnlyKey
-```
 
 ### Retry & Timeout Strategy
 
@@ -159,7 +183,20 @@ LLM requests automatically retry on failures:
 - **Backoff**: Exponential (1s → 2s → 4s)
 - **Timeout**: 30 seconds (configurable via `LLM_TIMEOUT`)
 
-For enterprise JWT/OAuth2 integration, see [ENTERPRISE.md](./ENTERPRISE.md).
+### Firebase Setup (Required)
+
+**Frontend - Firebase Web SDK**:
+1. Create Firebase project at https://console.firebase.google.com/
+2. Enable Authentication → Sign-in methods → Google and Email/Password
+3. Get Firebase config from Project Settings
+4. Add environment variables to Vercel (see Configuration section below)
+
+**Backend - Firebase Admin SDK**:
+1. Go to Project Settings → Service Accounts
+2. Generate new private key (downloads JSON file)
+3. Copy entire JSON content and set as `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable in Render
+
+For detailed setup instructions, see [SECURITY_AUTHENTICATION_GUIDE.md](./SECURITY_AUTHENTICATION_GUIDE.md).
 
 ## 📁 Project Structure
 
@@ -175,16 +212,24 @@ ai-financial-copilot/
 │   │   │   ├── rag_service.py        # RAG orchestration
 │   │   │   └── agent_service.py      # Future: AI agents
 │   │   ├── core/
-│   │   │   ├── config.py             # Settings
-│   │   │   ├── security.py           # API key auth
+│   │   │   ├── config.py             # Settings (+ Firebase config)
+│   │   │   ├── security.py           # Firebase JWT validation
 │   │   │   └── rate_limit.py         # Rate limiting
 │   │   ├── models.py                 # SQLAlchemy models
 │   │   ├── database.py               # DB connection
 │   │   └── utils/text_splitter.py    # Chunking
-│   ├── requirements.txt
+│   ├── requirements.txt              # Python dependencies (+ firebase-admin)
 │   └── Dockerfile
 ├── ai-copilot-frontend/              # React app
-│   ├── src/components/ChatInterface.tsx
+│   ├── src/
+│   │   ├── auth/
+│   │   │   ├── firebase.ts           # Firebase SDK initialization
+│   │   │   └── AuthContext.tsx       # Auth state management
+│   │   ├── components/
+│   │   │   ├── ChatInterface.tsx     # Main chat UI
+│   │   │   └── AuthScreen.tsx        # Login/signup UI
+│   │   └── App.tsx                   # Root component with AuthProvider
+│   ├── package.json                  # Dependencies (+ firebase)
 │   └── vite.config.ts
 ├── tests/
 │   ├── test_api.py                   # Unit tests
@@ -313,13 +358,14 @@ Structured Financial Analysis
 ### Integration Points
 
 ```bash
-# 1. Analyze via endpoint
-curl -X POST "http://localhost:8000/analyze" \
-  -H "X-API-Key: demo-key-12345" \
+# 1. Sign in and get Firebase JWT token via web UI first
+# 2. Use token to analyze via endpoint
+curl -X POST "https://ai-financial-copilot-3.onrender.com/analyze" \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6..." \
   -H "Content-Type: application/json" \
   -d '{"question": "Q3 2025 Financial Report..."}'
 
-# 2. Webhook notification on completion
+# 3. Webhook notification on completion
 # Triggers: POST /webhooks/analysis-complete
 # External systems notified of results
 ```
@@ -328,7 +374,7 @@ curl -X POST "http://localhost:8000/analyze" \
 
 | Feature | Status | Details |
 |---------|--------|---------|
-| **API Key Auth** | ✅ | Multiple scopes (read/write/admin) |
+| **Firebase Auth (OAuth2 + JWT)** | ✅ | Google login + Email/Password with JWT validation |
 | **Rate Limiting** | ✅ | Per-user limits with backoff |
 | **Webhook Support** | ✅ | Event-driven integration |
 | **Financial Analysis Agent** | ✅ | ReAct with 3 specialized tools |
@@ -336,7 +382,6 @@ curl -X POST "http://localhost:8000/analyze" \
 | **Error Handling** | ✅ | Graceful degradation + retries |
 | **Monitoring/Logging** | ✅ | Structured logs, debug endpoints |
 | **Docker Ready** | ✅ | Production-grade container setup |
-| **JWT/OAuth2** | 🔄 | [See ENTERPRISE.md](./ENTERPRISE.md) |
 | **Multi-tenancy** | 🔄 | Custom scoping layer |
 | **Analytics** | ⏳ | Query metrics dashboard |
 | **Caching Layer** | ⏳ | Redis integration |
@@ -387,6 +432,7 @@ curl -X POST "http://localhost:8000/analyze" \
 
 ## 🧠 Design Decisions
 
+- **Firebase Auth** over custom JWT: Industry-standard OAuth2, built-in security, easy integration
 - **PostgreSQL + pgvector** over FAISS: Persistent storage, production-ready, survives restarts
 - **Groq** over OpenAI: 10x faster inference, generous free tier
 - **Custom RAG** over LangChain: Lower memory footprint, full control
@@ -397,28 +443,65 @@ curl -X POST "http://localhost:8000/analyze" \
 ## ⚠️ Limitations
 
 - **Requires PostgreSQL**: Need Docker or local PostgreSQL with pgvector extension
-- **Single tenant**: No multi-user isolation (extend with tenant_id in metadata)
+- **Authentication required**: Must sign in with Google or Email to use the API
 - **Scanned PDFs** not supported (no OCR)
 - **No streaming** responses (full generation then return)
+
+## 🔄 Migration Notes
+
+**v2.0 (February 2026)**: Migrated from simple API key authentication to Firebase Auth (OAuth2 + JWT) for production-ready user management. This provides:
+- Individual user accounts and sessions
+- Industry-standard OAuth2 security
+- Built-in password reset and email verification
+- Better audit trails and user management
+
+Legacy API key authentication was removed in favor of Firebase tokens for all protected endpoints.
 
 ## ⚙️ Configuration
 
 ### Environment Variables
 
 **Backend** (`backend/.env`):
-```
+```bash
+# Required API Keys
 HF_TOKEN=hf_xxxxx              # Huggingface token for embeddings
 GROQ_API_KEY=gsk_xxxxx         # Groq API key for LLM
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_copilot  # PostgreSQL
-FRONTEND_ORIGINS=http://localhost:5173   # CORS origins
-API_KEYS=demo-key-12345:admin:DemoKey    # API authentication
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_copilot
+
+# Firebase Authentication (Required for protected endpoints)
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}  # Full JSON from Firebase
+
+# CORS Configuration
+FRONTEND_ORIGINS=http://localhost:5173,https://ai-financial-copilot-preview.vercel.app
+
+# Performance Tuning
 LLM_TIMEOUT=30                 # LLM timeout in seconds
 MAX_RETRIES=3                  # Retry attempts for LLM
+EMBEDDING_TIMEOUT=20           # Embedding timeout in seconds
+RETRY_MULTIPLIER=2             # Exponential backoff multiplier
 ```
 
-**Frontend** (`.env.production`):
+**Frontend** (`ai-copilot-frontend/.env.local`):
+```bash
+# API Backend URL
+VITE_API_BASE=http://localhost:8000
+
+# Firebase Web SDK Configuration (from Firebase Console)
+VITE_FIREBASE_API_KEY=AIzaSy...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
+VITE_FIREBASE_APP_ID=1:1234567890:web:abcdef
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
-VITE_API_BASE=https://your-api-url.com
+
+**Production** (`.env.production`):
+```bash
+VITE_API_BASE=https://ai-financial-copilot-3.onrender.com
+# + all VITE_FIREBASE_* variables (same as above)
 ```
 
 ### LLM Models
@@ -442,7 +525,9 @@ Automatic fallback chain (tries in order):
 
 - **PostgreSQL setup**: See [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) for local and Render deployment
 - **Enterprise setup**: See [ENTERPRISE.md](./ENTERPRISE.md) for scaling and multi-tenancy
-- **API docs**: https://ai-financial-copilot-2.onRenderer.com/docs
+- **Authentication Guide**: See [SECURITY_AUTHENTICATION_GUIDE.md](./SECURITY_AUTHENTICATION_GUIDE.md) for Firebase setup
+- **API docs**: https://ai-financial-copilot-3.onrender.com/docs
+- **Live Demo**: https://ai-financial-copilot-preview.vercel.app/
 - **Issues**: GitHub Issues
 
 ## 📝 License
