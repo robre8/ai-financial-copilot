@@ -17,6 +17,10 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 # The actual mock will prevent Firebase from being initialized anyway
 os.environ['FIREBASE_SERVICE_ACCOUNT_JSON'] = '{}'
 
+# Ensure external API tokens are present for request validation in tests
+os.environ.setdefault('HF_TOKEN', 'test-hf-token')
+os.environ.setdefault('GROQ_API_KEY', 'test-groq-key')
+
 # Add backend directory to Python path so imports work from tests
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
 if backend_path not in sys.path:
