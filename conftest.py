@@ -23,7 +23,7 @@ def mock_firebase_init():
 @pytest.fixture(autouse=True)
 def mock_firebase_verify(monkeypatch):
     """Mock Firebase token verification for all tests"""
-    async def mock_verify_token(credentials):
+    def mock_verify_token(credentials):
         # Return mock user data
         return {
             'uid': 'test-user-123',
