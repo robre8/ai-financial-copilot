@@ -183,41 +183,41 @@ export default function ChatInterface() {
 
   return (
     <div className={darkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950 dark:to-emerald-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">📊</span>
+        <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-xl">💼</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
                   AI Financial Copilot
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Powered by Groq + Huggingface
+                  Lightning-fast AI insights • Powered by Groq
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {user?.email && (
-                <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full">{user.email}</span>
               )}
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-lg"
+              >
+                {darkMode ? '☀️' : '🌙'}
+              </button>
               <button
                 onClick={async () => {
                   await signOut();
                 }}
-                className="px-3 py-2 text-xs rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/30 transition border border-red-200 dark:border-red-800"
                 title="Sign out"
               >
-                Sign out
-              </button>
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-              >
-                {darkMode ? '☀️' : '🌙'}
+                Logout
               </button>
             </div>
           </div>
@@ -227,32 +227,36 @@ export default function ChatInterface() {
         <main className="max-w-4xl mx-auto px-4 py-8">
           {/* Welcome Screen */}
           {messages.length === 0 && (
-            <div className="text-center py-12">
-              <div className="mb-6">
-                <div className="inline-block p-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-2xl">
-                  <span className="text-5xl">💡</span>
+            <div className="text-center py-16">
+              <div className="mb-8 inline-block">
+                <div className="relative inline-block">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl blur-2xl opacity-20"></div>
+                  <div className="relative p-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl">
+                    <span className="text-6xl">📊</span>
+                  </div>
                 </div>
               </div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-                Welcome to AI Financial Copilot
+              <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                Your AI Financial Advisor
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 text-lg mb-8 max-w-2xl mx-auto">
-                Upload a PDF with financial data, then ask questions and get AI-powered insights powered by Groq's lightning-fast LLM API.
+              <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+                Upload financial documents and get instant AI-powered analysis with Groq's industry-leading LLM technology.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
-                <div className="p-4 bg-white dark:bg-slate-700 rounded-lg">
-                  <p className="font-semibold text-slate-900 dark:text-white mb-2">📄 Upload PDF</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Start by uploading financial documents</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-4xl mx-auto mb-8">
+                <div className="p-5 bg-white dark:bg-slate-800/80 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all">
+                  <p className="font-bold text-slate-900 dark:text-white mb-2 text-lg">📄 Upload PDF</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Upload any financial report, statement, or document</p>
                 </div>
-                <div className="p-4 bg-white dark:bg-slate-700 rounded-lg">
-                  <p className="font-semibold text-slate-900 dark:text-white mb-2">❓ Ask Questions</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Query your documents with natural language</p>
+                <div className="p-5 bg-white dark:bg-slate-800/80 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-lg hover:border-purple-400 dark:hover:border-purple-600 transition-all">
+                  <p className="font-bold text-slate-900 dark:text-white mb-2 text-lg">✨ Ask Questions</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Query in natural language for instant insights</p>
                 </div>
-                <div className="p-4 bg-white dark:bg-slate-700 rounded-lg">
-                  <p className="font-semibold text-slate-900 dark:text-white mb-2">⚡ Get Answers</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Receive AI-powered financial insights</p>
+                <div className="p-5 bg-white dark:bg-slate-800/80 rounded-xl border border-pink-200 dark:border-pink-800 hover:shadow-lg hover:border-pink-400 dark:hover:border-pink-600 transition-all">
+                  <p className="font-bold text-slate-900 dark:text-white mb-2 text-lg">⚡ Get Answers</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Receive AI analysis powered by Groq</p>
                 </div>
               </div>
+              <p className="text-xs text-slate-500 dark:text-slate-500">💡 Start by clicking the upload button or typing a question</p>
             </div>
           )}
 
@@ -262,8 +266,8 @@ export default function ChatInterface() {
               <div key={msg.id} className="animate-fadeIn">
                 {/* User Question */}
                 <div className="flex justify-end mb-3">
-                  <div className="max-w-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl rounded-tr-none px-5 py-3 shadow-md">
-                    <p className="text-sm">{msg.question}</p>
+                  <div className="max-w-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl rounded-tr-none px-5 py-3 shadow-lg hover:shadow-xl transition-shadow">
+                    <p className="text-sm font-medium">{msg.question}</p>
                   </div>
                 </div>
 
@@ -279,24 +283,24 @@ export default function ChatInterface() {
                         </div>
                       </div>
                     ) : msg.error ? (
-                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
-                        <p className="text-sm text-red-700 dark:text-red-200 font-medium">⚠️ Error</p>
+                      <div className="bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
+                        <p className="text-sm text-red-700 dark:text-red-300 font-semibold">⚠️ Error occurred</p>
                         <p className="text-sm text-red-600 dark:text-red-300 mt-1">{msg.error}</p>
                       </div>
                     ) : (
                       <>
-                        <div className="bg-white dark:bg-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md mb-3">
-                          <p className="text-slate-900 dark:text-white text-sm leading-relaxed whitespace-pre-wrap">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none px-5 py-4 shadow-lg mb-3 border border-slate-200 dark:border-slate-700">
+                          <p className="text-slate-900 dark:text-white text-sm leading-relaxed whitespace-pre-wrap font-medium">
                             {msg.answer}
                           </p>
                           
                           {/* Model & Chunks Info */}
-                          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-600 flex flex-wrap items-center gap-2">
-                            <span className={`text-xs text-white px-3 py-1 rounded-full font-semibold ${getModelBadgeColor(msg.model)} shadow-sm`}>
-                              {msg.model === 'fallback-context' ? 'Fallback' : msg.model}
+                          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
+                            <span className={`text-xs text-white px-3 py-1 rounded-full font-bold ${getModelBadgeColor(msg.model)} shadow-md`}>
+                              {msg.model === 'fallback-context' ? '⚡ Fallback' : msg.model}
                             </span>
-                            <span className="text-xs bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-full">
-                              {msg.chunkCount} chunk{msg.chunkCount !== 1 ? 's' : ''} retrieved
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-semibold">
+                              📌 {msg.chunkCount} chunk{msg.chunkCount !== 1 ? 's' : ''}
                             </span>
                           </div>
                         </div>
@@ -316,7 +320,7 @@ export default function ChatInterface() {
                               {expandedMessage === msg.id ? '▼' : '▶'} Show context & details
                             </button>
                             {expandedMessage === msg.id && (
-                              <div className="mt-3 bg-slate-50 dark:bg-slate-800 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-slate-600">
+                              <div className="mt-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-slate-700">
                                 {msg.chunks.length > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">
@@ -359,7 +363,7 @@ export default function ChatInterface() {
           </div>
 
           {/* Input Form */}
-          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-100 dark:from-slate-800 via-white dark:via-slate-800 to-transparent pt-8 px-4 pb-6">
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-100/90 dark:from-slate-950/90 via-white/80 dark:via-slate-900/80 to-transparent pt-8 px-4 pb-6 backdrop-blur-sm">
             <div className="max-w-4xl mx-auto">
               {/* Upload Message */}
               {uploadMessage && (
@@ -390,7 +394,7 @@ export default function ChatInterface() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading || loading}
-                  className="px-5 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                   title="Upload PDF"
                 >
                   {uploading ? '⏳' : '📁'}
@@ -400,15 +404,15 @@ export default function ChatInterface() {
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask anything about your financial documents..."
-                  className="flex-1 px-5 py-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ask anything about your documents..."
+                  className="flex-1 px-5 py-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                 />
                 <button
                   type="submit"
                   disabled={loading || !question.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-7 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-lg"
                 >
-                  {loading ? '⏳' : '📤'}
+                  {loading ? '⏳' : '✨'}
                 </button>
               </form>
               <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-3">
