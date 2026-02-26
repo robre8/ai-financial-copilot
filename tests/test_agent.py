@@ -8,14 +8,23 @@ from app.main import app
 from app.services.agent_service import FinancialAnalysisAgent, get_financial_agent
 
 # Disable rate limiting for tests
-app.state.limiter.enabled = False
-client = TestClient(app)
+try:
+    if hasattr(app, 'state') and hasattr(app.state, 'limiter'):
+        app.state.limiter.enabled = False
+except Exception:
+    pass
+
+
+@pytest.fixture
+def client():
+    """Create test client for the app"""
+    return TestClient(app)
 
 
 @pytest.fixture
 def auth_headers():
-    """Return authentication headers"""
-    return {"X-API-Key": "demo-key-12345"}
+    """Return Firebase Bearer token headers"""
+    return {"Authorization": "Bearer mock-firebase-token"}
 
 
 class TestFinancialAnalysisAgent:
@@ -160,7 +169,7 @@ class TestFinancialAnalysisAgent:
 class TestAnalyzeEndpoint:
     """Test /analyze endpoint"""
 
-    def test_analyze_endpoint_success(self, auth_headers):
+    def test_analyze_endpoint_success(self, client, auth_headers):
         """Test successful financial analysis via endpoint"""
         doc = """
         Financial Report Q3 2025
@@ -183,7 +192,7 @@ class TestAnalyzeEndpoint:
         assert "timestamp" in data
         assert data["analysis"]["analysis_status"] == "completed"
 
-    def test_analyze_endpoint_no_auth(self):
+    def test_analyze_endpoint_no_auth(self, client):
         """Test endpoint requires authentication"""
         response = client.post(
             "/analyze",
@@ -192,7 +201,7 @@ class TestAnalyzeEndpoint:
         
         assert response.status_code == 401
 
-    def test_analyze_endpoint_empty_document(self, auth_headers):
+    def test_analyze_endpoint_empty_document(self, client, auth_headers):
         """Test endpoint rejects empty documents"""
         response = client.post(
             "/analyze",
@@ -206,7 +215,7 @@ class TestAnalyzeEndpoint:
 class TestWebhookEndpoint:
     """Test /webhooks/analysis-complete endpoint"""
 
-    def test_webhook_success(self, auth_headers):
+    def test_webhook_success(self, client, auth_headers):
         """Test webhook endpoint accepts events"""
         payload = {
             "event_id": "evt_123",
@@ -228,7 +237,7 @@ class TestWebhookEndpoint:
         assert "delivery_results" in data
         assert len(data["delivery_results"]) > 0
 
-    def test_webhook_no_auth(self):
+    def test_webhook_no_auth(self, client):
         """Test webhook requires authentication"""
         response = client.post(
             "/webhooks/analysis-complete",
@@ -237,7 +246,7 @@ class TestWebhookEndpoint:
         
         assert response.status_code == 401
 
-    def test_webhook_delivery_results(self, auth_headers):
+    def test_webhook_delivery_results(self, client, auth_headers):
         """Test webhook shows delivery status"""
         payload = {
             "event_id": "evt_789",
@@ -263,7 +272,7 @@ class TestWebhookEndpoint:
 class TestRootEndpointUpdate:
     """Test updated root endpoint with new features"""
 
-    def test_root_endpoint_includes_analyze(self):
+    def test_root_endpoint_includes_analyze(self, client):
         """Test root endpoint lists /analyze endpoint"""
         response = client.get("/")
         data = response.json()
@@ -271,7 +280,7 @@ class TestRootEndpointUpdate:
         assert "analyze_financial" in data["endpoints"]
         assert data["endpoints"]["analyze_financial"] == "POST /analyze"
 
-    def test_root_endpoint_includes_webhook(self):
+    def test_root_endpoint_includes_webhook(self, client):
         """Test root endpoint lists webhook endpoint"""
         response = client.get("/")
         data = response.json()
