@@ -6,7 +6,7 @@
 
 Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, Huggingface embeddings, and PostgreSQL pgvector search.
 
-**🚀 [Try Live Demo](https://ai-financial-copilot-preview.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-3.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
+**🚀 [Try Live Demo](https://ai-financial-copilot.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-3.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
 
 ---
 
@@ -16,13 +16,15 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 main (production)
   ├── Stable, production-ready code
   ├── Tagged releases
-  └── Deployed to: https://ai-financial-copilot-3.onrender.com
+  ├── Frontend: https://ai-financial-copilot.vercel.app (Vercel production)
+  └── Backend: https://ai-financial-copilot-3.onrender.com (Render production)
        ↑ (merges from feature branches)
 
 feature/improvements (development)
   ├── Active development branch
   ├── Preview builds on every push
-  └── Deployed to: https://ai-financial-copilot-preview.vercel.app (Vercel preview)
+  ├── Frontend: https://ai-financial-copilot-preview.vercel.app (Vercel preview)
+  └── Backend: Testing/staging endpoints
 ```
 
 **Workflow**:
@@ -72,7 +74,7 @@ feature/improvements (development)
 ## 🚀 Quick Start
 
 ### Try Online (Easiest)
-Visit https://ai-financial-copilot-preview.vercel.app/, sign in with Google or create an account, upload a PDF, and start asking questions.
+Visit https://ai-financial-copilot.vercel.app/, sign in with Google or create an account, upload a PDF, and start asking questions.
 
 ### Run Locally (5 minutes)
 
@@ -539,7 +541,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_copilot
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}  # Full JSON from Firebase
 
 # CORS Configuration
-FRONTEND_ORIGINS=http://localhost:5173,https://ai-financial-copilot-preview.vercel.app
+FRONTEND_ORIGINS=http://localhost:5173,https://ai-financial-copilot.vercel.app,https://ai-financial-copilot-preview.vercel.app
 
 # Performance Tuning
 LLM_TIMEOUT=30                 # LLM timeout in seconds
@@ -592,7 +594,7 @@ Automatic fallback chain (tries in order):
 - **Enterprise setup**: See [ENTERPRISE.md](./ENTERPRISE.md) for scaling and multi-tenancy
 - **Authentication Guide**: See [SECURITY_AUTHENTICATION_GUIDE.md](./SECURITY_AUTHENTICATION_GUIDE.md) for Firebase setup
 - **API docs**: https://ai-financial-copilot-3.onrender.com/docs
-- **Live Demo**: https://ai-financial-copilot-preview.vercel.app/
+- **Live Demo**: https://ai-financial-copilot.vercel.app/
 - **Issues**: GitHub Issues
 
 ## 📝 License

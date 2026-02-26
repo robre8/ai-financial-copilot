@@ -116,7 +116,11 @@ Merge to main
   ↓
 GitHub Actions: Run tests + Docker build
   ↓
-Render.com auto-deployment
+Vercel auto-deployment (frontend)
+  ↓
+Live at: https://ai-financial-copilot.vercel.app
+  ↓
+Render.com auto-deployment (backend)
   ↓
 Live at: https://ai-financial-copilot-3.onrender.com
   ↓

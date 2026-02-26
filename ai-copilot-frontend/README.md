@@ -39,7 +39,7 @@ VITE_API_BASE=http://localhost:8000
 
 For production (Vercel):
 ```env
-VITE_API_BASE=https://ai-financial-copilot.onrender.com
+VITE_API_BASE=https://ai-financial-copilot-3.onrender.com
 ```
 
 ## Build
