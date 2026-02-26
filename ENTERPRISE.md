@@ -5,8 +5,8 @@
 See [README.md](./README.md) for quick start.
 
 > ⚠️ Note:
-> The current open-source version runs with an in-memory FAISS index and demo-level configuration.
-> This document outlines a recommended enterprise-grade architecture for production deployment in regulated environments.
+> The open-source version uses PostgreSQL + pgvector and Firebase Auth by default.
+> This document outlines recommended enterprise-grade architecture and additional controls for regulated environments.
 
 ## 📑 Table of Contents
 
@@ -88,35 +88,29 @@ See [README.md](./README.md) for quick start.
 
 ### 1. Authentication & Identity
 
-#### JWT-Based Authentication
+#### Firebase JWT Authentication (Current Implementation)
 ```python
 # backend/app/core/security.py
-from fastapi_jwt_extended import JWTManager, create_access_token
-from fastapi.security import HTTPBearer, HTTPAuthCredentialDetails
-
-jwt_manager = JWTManager()
-security = HTTPBearer()
+from fastapi import Security
+from app.core.security import verify_firebase_token
 
 # Protected endpoint example
 @router.post("/ask")
 async def ask(
-    question: str,
-    credentials: HTTPAuthCredentialDetails = Depends(security)
+  question: str,
+  user_data: dict = Security(verify_firebase_token)
 ):
-    token = credentials.credentials
-    claims = jwt_manager.decode_token(token)
-    user_id = claims.get("sub")
-    # Process request for authenticated user
-    ...
+  user_id = user_data.get("uid")
+  # Process request for authenticated user
+  ...
 ```
 
 #### Environment Setup
 ```bash
 # backend/.env
-JWT_ALGORITHM=HS256
-JWT_SECRET_KEY=your-super-secret-key-min-32-chars
-JWT_EXPIRATION_HOURS=24
-OAUTH2_PROVIDERS=google,azure,okta  # Multi-tenant support
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+FRONTEND_ORIGINS=https://your-frontend.example.com
+# Optional: enterprise IdP federation can be configured via Firebase or external OIDC providers.
 ```
 
 ### 2. Data Protection
@@ -274,6 +268,9 @@ class ReadOnlyQuery(Base):
 ```
 
 ### API Key Management
+
+This is an optional enterprise add-on for service-to-service access.
+The default open-source implementation uses Firebase JWTs for user authentication.
 
 ```python
 # backend/app/core/api_keys.py

@@ -30,7 +30,7 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 
 ## 🔄 CI/CD & Quality
 
-- 20+ unit tests (backend + frontend)
+- 50+ tests (backend + integration)
 - GitHub Actions pipeline (test, lint, Docker build)
 - Code coverage reporting
 - Dockerized backend service
@@ -115,7 +115,7 @@ docker-compose down
 - Auto-created database and tables
 - Hot-reload for development
 
-See [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) for production setup with Render.
+For production setup, use the Render blueprint in [render.yaml](render.yaml).
 
 ## 📡 API Endpoints
 
@@ -222,14 +222,12 @@ ai-financial-copilot/
 │   └── Dockerfile
 ├── ai-copilot-frontend/              # React app
 │   ├── src/
-│   │   ├── auth/
-│   │   │   ├── firebase.ts           # Firebase SDK initialization
-│   │   │   └── AuthContext.tsx       # Auth state management
 │   │   ├── components/
-│   │   │   ├── ChatInterface.tsx     # Main chat UI
-│   │   │   └── AuthScreen.tsx        # Login/signup UI
-│   │   └── App.tsx                   # Root component with AuthProvider
-│   ├── package.json                  # Dependencies (+ firebase)
+│   │   │   └── ChatInterface.tsx     # Main chat UI
+│   │   ├── App.tsx                   # Root component
+│   │   ├── main.tsx                  # App entrypoint
+│   │   └── index.css                 # Global styles
+│   ├── package.json                  # Dependencies
 │   └── vite.config.ts
 ├── tests/
 │   ├── test_api.py                   # Unit tests
@@ -273,7 +271,7 @@ Return answer + model info + source chunks
 │               FastAPI Backend (Render/Docker)               │
 ├─────────────┬──────────────┬──────────────┬────────────────┤
 │ REST API    │ Security     │ Rate Limit   │ Error Handling │
-│ • /upload   │ • API Keys   │ • 10 req/min │ • Retries      │
+│ • /upload   │ • Firebase   │ • 10 req/min │ • Retries      │
 │ • /ask      │ • JWT/OAuth2 │ • Per user   │ • Timeouts     │
 │ • /analyze  │ • Scopes     │ • Backoff    │ • Graceful     │
 │ • /webhooks │ • CORS       │ (enterprise) │ • Logging      │
@@ -463,7 +461,7 @@ Legacy API key authentication was removed in favor of Firebase tokens for all pr
 
 **Backend** (`backend/.env`):
 ```bash
-# Required API Keys
+# Required API Tokens
 HF_TOKEN=hf_xxxxx              # Huggingface token for embeddings
 GROQ_API_KEY=gsk_xxxxx         # Groq API key for LLM
 
