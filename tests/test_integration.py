@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 import io
 import os
@@ -30,22 +31,30 @@ TEST_DATABASE_URL = os.getenv(
 # Fallback to SQLite if PostgreSQL not available
 engine = None
 try:
-    # PostgreSQL uses connect_timeout, SQLite uses timeout
-    connect_args = {"connect_timeout": 5} if "postgresql" in TEST_DATABASE_URL else {"timeout": 5}
-    test_engine = create_engine(TEST_DATABASE_URL, connect_args=connect_args)
-    # Only test connection for PostgreSQL
     if "postgresql" in TEST_DATABASE_URL:
+        connect_args = {"connect_timeout": 5}
+        test_engine = create_engine(TEST_DATABASE_URL, connect_args=connect_args)
         with test_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+    else:
+        # Use a shared in-memory SQLite DB across connections.
+        TEST_DATABASE_URL = "sqlite://"
+        test_engine = create_engine(
+            TEST_DATABASE_URL,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool
+        )
+
     engine = test_engine
     logger.info(f"✅ Using database: {TEST_DATABASE_URL[:50]}...")
 except Exception as e:
     logger.warning(f"⚠️ PostgreSQL not available or error occurred: {e}")
     if engine is None:
-        TEST_DATABASE_URL = "sqlite:///:memory:"
+        TEST_DATABASE_URL = "sqlite://"
         engine = create_engine(
             TEST_DATABASE_URL,
-            connect_args={"check_same_thread": False}
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool
         )
         logger.info("✅ Using SQLite in-memory database for tests")
 
@@ -96,6 +105,69 @@ def setup_database():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_external_dependencies(monkeypatch):
+    """Mock external services and align DB session with test engine."""
+    from app import database as database_module
+    from app.services import vector_service as vector_service_module
+    from app.services import embedding_service as embedding_service_module
+    from app.services import llm_service as llm_service_module
+    from app.services import pdf_service as pdf_service_module
+
+    # Ensure vector service uses the same test DB session.
+    monkeypatch.setattr(database_module, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(vector_service_module, "SessionLocal", TestingSessionLocal)
+
+    # Avoid external HuggingFace calls.
+    def fake_embed_text(text: str) -> list:
+        return [0.0] * embedding_service_module.EmbeddingService.dimension
+
+    monkeypatch.setattr(
+        embedding_service_module.EmbeddingService,
+        "embed_text",
+        staticmethod(fake_embed_text),
+    )
+
+    # Avoid external LLM calls.
+    def fake_generate(prompt: str):
+        return ("Revenue was $150 Million in Q3 2025.", "mock-model")
+
+    monkeypatch.setattr(
+        llm_service_module.LLMService,
+        "generate",
+        staticmethod(fake_generate),
+    )
+
+    # Avoid pgvector SQL on SQLite by returning deterministic results.
+    def fake_similarity_search(self, query: str, k: int = 4, filter_metadata=None):
+        return [
+            {
+                "id": 1,
+                "content": "Revenue: $150 Million",
+                "metadata": {},
+                "score": 0.99
+            }
+        ]
+
+    monkeypatch.setattr(
+        vector_service_module.VectorService,
+        "similarity_search",
+        fake_similarity_search
+    )
+
+    # Avoid PDF parsing dependencies in tests.
+    def fake_extract_text(file_path: str) -> str:
+        return "Revenue: $150 Million\nNet Income: $45 Million"
+
+    monkeypatch.setattr(
+        pdf_service_module.PDFService,
+        "extract_text",
+        staticmethod(fake_extract_text),
+    )
+
+    yield
 
 
 @pytest.fixture
