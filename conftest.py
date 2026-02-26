@@ -18,8 +18,10 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['FIREBASE_SERVICE_ACCOUNT_JSON'] = '{}'
 
 # Ensure external API tokens are present for request validation in tests
-os.environ.setdefault('HF_TOKEN', 'test-hf-token')
-os.environ.setdefault('GROQ_API_KEY', 'test-groq-key')
+if not os.environ.get('HF_TOKEN'):
+    os.environ['HF_TOKEN'] = 'test-hf-token'
+if not os.environ.get('GROQ_API_KEY'):
+    os.environ['GROQ_API_KEY'] = 'test-groq-key'
 
 # Add backend directory to Python path so imports work from tests
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
