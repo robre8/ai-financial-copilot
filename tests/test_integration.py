@@ -24,25 +24,30 @@ logger = logging.getLogger(__name__)
 # Priority: TEST_DATABASE_URL env var → POSTGRESQL (default)
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/ai_copilot"
+    "sqlite:///:memory:"  # Use SQLite in memory by default for tests
 )
 
 # Fallback to SQLite if PostgreSQL not available
+engine = None
 try:
     # PostgreSQL uses connect_timeout, SQLite uses timeout
     connect_args = {"connect_timeout": 5} if "postgresql" in TEST_DATABASE_URL else {"timeout": 5}
     test_engine = create_engine(TEST_DATABASE_URL, connect_args=connect_args)
-    with test_engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
+    # Only test connection for PostgreSQL
+    if "postgresql" in TEST_DATABASE_URL:
+        with test_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
     engine = test_engine
     logger.info(f"✅ Using database: {TEST_DATABASE_URL[:50]}...")
 except Exception as e:
-    logger.warning(f"⚠️ PostgreSQL not available, using SQLite: {e}")
-    TEST_DATABASE_URL = "sqlite:///:memory:"
-    engine = create_engine(
-        TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False}
-    )
+    logger.warning(f"⚠️ PostgreSQL not available or error occurred: {e}")
+    if engine is None:
+        TEST_DATABASE_URL = "sqlite:///:memory:"
+        engine = create_engine(
+            TEST_DATABASE_URL,
+            connect_args={"check_same_thread": False}
+        )
+        logger.info("✅ Using SQLite in-memory database for tests")
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -59,11 +64,18 @@ def override_get_db():
 # Override the database dependency
 app.dependency_overrides[get_db] = override_get_db
 
-# Create test client
-client = TestClient(app)
 
-# Disable rate limiting for tests
-app.state.limiter.enabled = False
+@pytest.fixture(scope="function")
+def client():
+    """Create a fresh test client for each test with proper configuration."""
+    test_client = TestClient(app)
+    # Disable rate limiting for tests if limiter exists
+    try:
+        if hasattr(app, 'state') and hasattr(app.state, 'limiter'):
+            app.state.limiter.enabled = False
+    except Exception as e:
+        logger.debug(f"Could not disable rate limiting: {e}")
+    return test_client
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -142,7 +154,7 @@ startxref
 class TestIntegrationRAGPipeline:
     """Integration tests for the complete RAG pipeline."""
     
-    def test_health_check(self):
+    def test_health_check(self, client):
         """Test root endpoint is accessible."""
         response = client.get("/")
         assert response.status_code == 200
@@ -150,7 +162,7 @@ class TestIntegrationRAGPipeline:
         assert data["status"] == "online"
         assert "message" in data
     
-    def test_upload_pdf_without_auth(self):
+    def test_upload_pdf_without_auth(self, client):
         """Test that PDF upload requires authentication."""
         pdf_bytes = create_test_pdf()
         files = {"file": ("test.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
@@ -158,7 +170,7 @@ class TestIntegrationRAGPipeline:
         response = client.post("/upload-pdf", files=files)
         assert response.status_code == 401  # Unauthorized without auth
     
-    def test_upload_pdf_with_auth(self, auth_headers):
+    def test_upload_pdf_with_auth(self, client, auth_headers):
         """Test successful PDF upload with authentication."""
         pdf_bytes = create_test_pdf()
         files = {"file": ("financial_report.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
@@ -169,12 +181,12 @@ class TestIntegrationRAGPipeline:
         assert "message" in data
         assert "success" in data["message"].lower() or "indexed" in data["message"].lower()
     
-    def test_ask_question_without_auth(self):
+    def test_ask_question_without_auth(self, client):
         """Test that asking questions requires authentication."""
         response = client.post("/ask", json={"question": "What is the revenue?"})
         assert response.status_code == 401  # Unauthorized without auth
     
-    def test_ask_question_with_auth_no_documents(self, auth_headers):
+    def test_ask_question_with_auth_no_documents(self, client, auth_headers):
         """Test asking a question when documents may or may not be indexed."""
         response = client.post(
             "/ask",
@@ -188,7 +200,7 @@ class TestIntegrationRAGPipeline:
         # (documents may persist from previous test runs)
         assert "answer" in data or "no relevant information" in data["answer"].lower()
     
-    def test_full_rag_pipeline(self, auth_headers):
+    def test_full_rag_pipeline(self, client, auth_headers):
         """
         Test complete RAG pipeline: upload PDF, then ask questions.
         
@@ -222,7 +234,7 @@ class TestIntegrationRAGPipeline:
         answer = data["answer"].lower()
         assert "150 million" in answer or "revenue" in answer
     
-    def test_ask_empty_question(self, auth_headers):
+    def test_ask_empty_question(self, client, auth_headers):
         """Test that empty questions are rejected."""
         response = client.post(
             "/ask",
@@ -233,7 +245,7 @@ class TestIntegrationRAGPipeline:
         data = response.json()
         assert "detail" in data
     
-    def test_upload_non_pdf_file(self, auth_headers):
+    def test_upload_non_pdf_file(self, client, auth_headers):
         """Test that non-PDF files are rejected."""
         text_file = b"This is not a PDF file"
         files = {"file": ("test.txt", io.BytesIO(text_file), "text/plain")}
@@ -243,7 +255,7 @@ class TestIntegrationRAGPipeline:
         data = response.json()
         assert "pdf" in data["detail"].lower()
     
-    def test_debug_llm_endpoint(self, auth_headers):
+    def test_debug_llm_endpoint(self, client, auth_headers):
         """Test debug LLM endpoint returns raw model output."""
         response = client.post(
             "/debug/llm-raw",

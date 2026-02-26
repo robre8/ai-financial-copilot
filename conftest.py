@@ -6,6 +6,18 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
+# ============================================================================
+# CRITICAL: Configure environment BEFORE any app imports
+# ============================================================================
+
+# Set test database URL if not already set
+if 'DATABASE_URL' not in os.environ:
+    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
+# Set Firebase mock credentials
+if 'FIREBASE_SERVICE_ACCOUNT_JSON' not in os.environ:
+    os.environ['FIREBASE_SERVICE_ACCOUNT_JSON'] = '{"type":"service_account","project_id":"test-project"}'
+
 # Add backend directory to Python path so imports work from tests
 backend_path = os.path.join(os.path.dirname(__file__), 'backend')
 if backend_path not in sys.path:
@@ -18,6 +30,13 @@ def mock_firebase_init():
     with patch('firebase_admin.initialize_app'):
         with patch('firebase_admin.get_app'):
             yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_database_init():
+    """Mock database initialization to prevent real database connections"""
+    with patch('app.database.init_db'):
+        yield
 
 
 @pytest.fixture(autouse=True)
