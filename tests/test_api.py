@@ -17,19 +17,6 @@ def auth_headers():
     return {"Authorization": "Bearer mock-firebase-token"}
 
 
-@pytest.fixture(autouse=True)
-def mock_firebase_auth():
-    """Mock Firebase authentication for all tests"""
-    with patch('app.core.security.verify_firebase_token') as mock_verify:
-        # Return a mock user data dict that Firebase would return
-        mock_verify.return_value = {
-            'uid': 'test-user-123',
-            'email': 'test@example.com',
-            'email_verified': True
-        }
-        yield mock_verify
-
-
 class TestAPIEndpoints:
     """Test suite for API endpoints"""
 

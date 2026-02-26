@@ -44,6 +44,8 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PYTHONPATH: ${{ github.workspace }}/backend
+          FIREBASE_SERVICE_ACCOUNT_JSON: '{"type":"service_account","project_id":"test"}'
+          DATABASE_URL: sqlite:///./test.db
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
