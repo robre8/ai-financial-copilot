@@ -8,15 +8,26 @@ from app.schemas.rag_schema import QuestionRequest
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI app"""
-    # Disable rate limiting for tests
-    app.state.limiter.enabled = False
     return TestClient(app)
 
 
 @pytest.fixture
 def auth_headers():
-    """Return authentication headers with valid API key"""
-    return {"X-API-Key": "demo-key-12345"}
+    """Return authentication headers with mocked Firebase token"""
+    return {"Authorization": "Bearer mock-firebase-token"}
+
+
+@pytest.fixture(autouse=True)
+def mock_firebase_auth():
+    """Mock Firebase authentication for all tests"""
+    with patch('app.core.security.verify_firebase_token') as mock_verify:
+        # Return a mock user data dict that Firebase would return
+        mock_verify.return_value = {
+            'uid': 'test-user-123',
+            'email': 'test@example.com',
+            'email_verified': True
+        }
+        yield mock_verify
 
 
 class TestAPIEndpoints:

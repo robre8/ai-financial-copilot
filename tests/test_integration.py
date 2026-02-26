@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from unittest.mock import patch
 import io
 import os
 import logging
@@ -87,8 +88,20 @@ def setup_database():
 
 @pytest.fixture
 def auth_headers():
-    """Provide authentication headers for API requests."""
-    return {"X-API-Key": "demo-key-12345"}
+    """Provide authentication headers for API requests with Firebase token."""
+    return {"Authorization": "Bearer mock-firebase-token"}
+
+
+@pytest.fixture(autouse=True)
+def mock_firebase_auth():
+    """Mock Firebase authentication for integration tests"""
+    with patch('app.core.security.verify_firebase_token') as mock_verify:
+        mock_verify.return_value = {
+            'uid': 'test-user-123',
+            'email': 'test@example.com',
+            'email_verified': True
+        }
+        yield mock_verify
 
 
 def create_test_pdf() -> bytes:
