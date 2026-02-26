@@ -1,12 +1,36 @@
 # 🏢 Enterprise Guide - AI Financial Copilot
 
-> For production deployments, compliance requirements, and advanced configurations. 
+> Enterprise-grade production deployments, compliance frameworks, and advanced configurations for regulated financial environments.
 
-See [README.md](./README.md) for quick start.
+**Quick Links**: [README.md](./README.md) | [Architecture](#enterprise-architecture) | [Security](#security--compliance) | [Deployment](#deployment--infrastructure) | [Operations](#operational-runbooks)
 
-> ⚠️ Note:
-> The open-source version uses PostgreSQL + pgvector and Firebase Auth by default.
-> This document outlines recommended enterprise-grade architecture and additional controls for regulated environments.
+---
+
+## 🔄 Deployment Pipeline
+
+```
+Git Commit
+    ↓
+feature/improvements (PR testing)
+    ├── GitHub Actions: Run 50+ tests
+    ├── Vercel: Auto-deploy preview
+    └── Review & test before merge
+    ↓
+main (production approval)
+    ├── Create release (semantic version)
+    └── GitHub Actions: Deploy to Render.com
+         ├── Backend: https://ai-financial-copilot-3.onrender.com
+         ├── Database: PostgreSQL 15 + pgvector
+         └── Storage: Persistent volumes
+```
+
+**Release Process**:
+1. Features merged to `main` are automatically deployed
+2. Tag releases with semantic versions for version control
+3. Render hooks trigger automatic deployment on main branch updates
+4. Rollback: Revert commit and re-push to main
+
+---
 
 ## 📑 Table of Contents
 
@@ -25,62 +49,79 @@ See [README.md](./README.md) for quick start.
 
 ## Enterprise Architecture
 
-### High-Level Deployment Diagram
+### Current Stack (Production Ready)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Client Applications                      │
-│ (Internal Dashboard, Mobile App, Third-party Integrations) │
-└────────────────────┬────────────────────────────────────────┘
-                     │ HTTPS
-                     ↓
-    ┌────────────────────────────────────────┐
-    │      API Gateway / Load Balancer       │
-    │      (Kong, Nginx, AWS ALB)            │
-    │      - Rate limiting                   │
-    │      - Request routing                 │
-    │      - SSL/TLS termination             │
-    └────────────────────────────────────────┘
-                     │
-        ┌────────────┼────────────┐
-        ↓            ↓            ↓
-    ┌─────────┐ ┌─────────┐ ┌─────────┐
-    │ FastAPI │ │ FastAPI │ │ FastAPI │  (Kubernetes Pods)
-    │ Replica │ │ Replica │ │ Replica │  - Horizontal autoscaling
-    │    1    │ │    2    │ │    3    │  - Health checks
-    └────┬────┘ └────┬────┘ └────┬────┘
-         │           │           │
-         └───────────┼───────────┘
-                     │
-        ┌────────────┼─────────────┐
-        ↓            ↓             ↓
-    ┌─────────┐ ┌─────────┐ ┌──────────┐
-    │ Redis   │ │ Postgres│ │  S3/GCS  │
-    │ Cache   │ │pgvector │ │ Blob     │
-    │         │ │(Vector  │ │ Storage  │
-    │         │ │ DB)     │ │          │
-    └─────────┘ └─────────┘ └──────────┘
-         │            │
-         └────────────┼─────────────┐
-                      ↓             ↓
-                 ┌──────────┐  ┌──────────┐
-                 │ Groq API │  │HuggingFace
-                 │  (LLM)   │  │(Embeddings)
-                 └──────────┘  └──────────┘
+│           Frontend (React 18 + Vite + Tailwind)             │
+│    Deployed: Vercel (Preview: feature/improvements)         │
+│    Production: Soon via CI/CD                               │
+└─────────────────┬───────────────────────────────────────────┘
+                  │ HTTPS/TLS 1.3
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              FastAPI Backend + Uvicorn                      │
+│  Deployed: Render.com (https://ai-financial-copilot-3...)   │
+│  • REST API Endpoints (/upload, /ask, /analyze)            │
+│  • Firebase JWT Authentication                             │
+│  • Rate Limiting (10 req/min per user)                     │
+│  • Structured Logging                                      │
+└────────┬──────────────────────┬────────────────────┬────────┘
+         │                      │                    │
+    RAG Logic            Agent Service         Webhooks
+    • Chunking          • ReAct pattern       • Event dispatch
+    • Embedding         • Tool execution      • Async delivery
+    • Search            • Reasoning           • Retry logic
+         │                      │                    │
+         └──────────────┬───────┴────────────────────┘
+                        │
+         ┌──────────────┼──────────────┐
+         ▼              ▼              ▼
+    PostgreSQL    HuggingFace      Groq API
+    + pgvector    (Embeddings)     (LLM)
+    (Render)      (Free Tier)      (Free Tier)
+                                   3-model fallback
 ```
 
-### Microservices Breakdown
+### Microservices Layer
 
-| Service | Responsibility | Tech |
-|---------|------------------|------|
-| **API Gateway** | Route, auth, rate limit, SSL | Kong / AWS ALB |
-| **FastAPI Replicas** | Core logic, request handling | FastAPI + Uvicorn |
-| **Vector DB** | Semantic search, embeddings | PostgreSQL + pgvector |
-| **Cache Layer** | Query caching, session storage | Redis |
-| **Document Storage** | PDF archival and versioning | AWS S3 / Google Cloud Storage |
-| **Message Queue** | Async document processing | RabbitMQ / AWS SQS |
-| **Monitoring** | Logs, metrics, tracing | Prometheus + Grafana + Jaeger |
-| **Auth Service** | JWT validation, RBAC | Keycloak / AWS Cognito |
+| Component | Technology | Responsibility | Scaling |
+|-----------|-----------|-----------------|---------|
+| **Frontend** | React 18 + Vite | Web UI, auth flow, PDF upload | CDN (Vercel) |
+| **Web Server** | FastAPI + Uvicorn | HTTP API, routing, middleware | Horizontal (replicas) |
+| **Vector DB** | PostgreSQL 15 + pgvector | Persistent semantic search | Vertical (postgres-plan) |
+| **Embeddings** | Huggingface API | Vector generation (all-MiniLM, 384-dim) | Rate-limited free tier |
+| **LLM** | Groq API | Fast inference with 3-model fallback | Rate-limited free tier |
+| **Auth** | Firebase Admin SDK | JWT validation, user management | Managed service |
+| **Storage** | Render volumes | PDF documents, vector cache | 1GB included |
+
+### Deployment Architecture
+
+**Development** (feature/improvements):
+```
+Push to GitHub
+  ↓
+GitHub Actions tests (50+ tests)
+  ↓
+Vercel preview build
+  ↓
+Live at: https://ai-financial-copilot-preview.vercel.app
+  ↓
+Manual test → Merge to main when ready
+```
+
+**Production** (main):
+```
+Merge to main
+  ↓
+GitHub Actions: Run tests + Docker build
+  ↓
+Render.com auto-deployment
+  ↓
+Live at: https://ai-financial-copilot-3.onrender.com
+  ↓
+PostgreSQL persistent data maintained
+```
 
 ---
 
@@ -88,101 +129,216 @@ See [README.md](./README.md) for quick start.
 
 ### 1. Authentication & Identity
 
-#### Firebase JWT Authentication (Current Implementation)
-```python
-# backend/app/core/security.py
-from fastapi import Security
-from app.core.security import verify_firebase_token
+#### Firebase Authentication (Recommended for Production)
 
-# Protected endpoint example
-@router.post("/ask")
-async def ask(
-  question: str,
-  user_data: dict = Security(verify_firebase_token)
-):
-  user_id = user_data.get("uid")
-  # Process request for authenticated user
-  ...
+Firebase provides industry-standard OAuth2 + JWT authentication with minimal infrastructure setup:
+
+**Sign-in Methods**:
+- 🔐 **Google OAuth2**: Federated identity
+- 📧 **Email/Password**: Traditional authentication
+- 🔄 **JWT Tokens**: Automatic refresh & validation
+
+**How it Works**:
+```
+1. Frontend: User signs in (Google or Email/Password)
+   ↓
+2. Firebase: Issues JWT ID token (1 hour expiry)
+   ↓
+3. Frontend: Stores token in localStorage
+   ↓
+4. Every API request: Include token in Authorization header
+   Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6...
+   ↓
+5. Backend: Validates token using Firebase Admin SDK
+   ↓
+6. Request proceeds with user_id in security context
 ```
 
-#### Environment Setup
+**Backend Implementation**:
+```python
+# backend/app/core/security.py
+from firebase_admin import auth
+from fastapi import Security
+
+async def verify_firebase_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())
+) -> dict:
+    """Validate Firebase JWT token"""
+    try:
+        token = credentials.credentials
+        decoded_token = auth.verify_id_token(token)
+        return decoded_token  # {"uid": "user123", "email": "user@example.com", ...}
+    except auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except auth.ExpiredIdTokenError:
+        raise HTTPException(status_code=401, detail="Token expired")
+
+# Protected endpoint
+@router.post("/ask")
+async def ask(
+    question: str, 
+    user = Security(verify_firebase_token)
+):
+    user_id = user.get("uid")
+    # Process request
+```
+
+**Environment Configuration**:
 ```bash
 # backend/.env
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-FRONTEND_ORIGINS=https://your-frontend.example.com
-# Optional: enterprise IdP federation can be configured via Firebase or external OIDC providers.
+FIREBASE_SERVICE_ACCOUNT_JSON='{"type": "service_account", "project_id": "your-project-id", "private_key": "..."}'
+FRONTEND_ORIGINS=https://your-frontend.example.com,https://preview.example.com
+```
+
+#### Alternative: Enterprise OIDC Integration
+
+For corporate environments with existing IdP (Okta, Azure AD, etc):
+```python
+from authlib.integrations.starlette_client import OAuth
+
+oauth = OAuth()
+oauth.register(
+    name='oidc_provider',
+    client_id='YOUR_CLIENT_ID',
+    client_secret='YOUR_CLIENT_SECRET',
+    server_metadata_url='https://your-idp/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid profile email'},
+)
 ```
 
 ### 2. Data Protection
 
 #### Encryption at Rest
+- **PostgreSQL encryption**: Enable at host level (AWS RDS encryption, or full-disk encryption on VPS)
+- **Connection string**: Use SSL mode for PostgreSQL connections
 ```python
-# Use AWS Secrets Manager or HashiCorp Vault for sensitive data
-import boto3
-
-secrets_client = boto3.client('secretsmanager')
-
-def get_api_key(key_name: str):
-    response = secrets_client.get_secret_value(SecretId=key_name)
-    return response['SecretString']
+DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 ```
 
 #### Encryption in Transit
-- **All traffic**: HTTPS/TLS 1.3 minimum
-- **Certificate**: Automated renewal with Let's Encrypt or AWS ACM
-- **HSTS**: Enabled for browsers (HTTP Strict-Transport-Security)
+- **HTTPS/TLS 1.3**: All traffic encrypted end-to-end
+- **Certificate**: Automatically renewed via Let's Encrypt
+- **HSTS**: Enabled to prevent downgrade attacks
+- **CORS**: Restrict to expected origins only
 
-#### Field-Level Encryption
-```python
-# For sensitive document metadata
-from cryptography.fernet import Fernet
-
-cipher_suite = Fernet(your_key)
-
-encrypted_data = cipher_suite.encrypt(b"sensitive_info")
-decrypted_data = cipher_suite.decrypt(encrypted_data)
+**Nginx Configuration** (recommended reverse proxy):
+```nginx
+server {
+    listen 443 ssl http2;
+    ssl_protocols TLSv1.3 TLSv1.2;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:...
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+}
 ```
 
-### 3. Compliance Requirements
-
-#### GDPR (EU Users)
-- ✅ **Right to erasure** (delete user data)
-- ✅ **Data portability** (export user data)
-- ✅ **Privacy by design** (minimal data collection)
-- ✅ **DPA** (Data Processing Agreement with vendors)
+#### Sensitive Data Handling
+- Never log API keys, tokens, or PII
+- Document PDFs may contain sensitive financial data → implement document-level access control
+- Mask or tokenize PII before vector encoding
 
 ```python
-@router.delete("/users/{user_id}/data")
-async def gdpr_right_to_erasure(user_id: str):
-    """Delete all user data including vector embeddings"""
-    db.delete_user_documents(user_id)
-    db.delete_user_embeddings(user_id)
-    db.delete_user_account(user_id)
-    log_audit_event("GDPR_ERASURE", user_id)
-    return {"status": "success"}
-```
-
-#### SOC 2 Type II
-- ✅ **Availability**: 99.95% uptime SLA
-- ✅ **Security**: Encryption, access controls, vulnerability scanning
-- ✅ **Integrity**: Checksums, audit logs
-- ✅ **Confidentiality**: RBAC, encryption
-- ✅ **Privacy**: Data minimization, retention policies
-
-#### PII Handling
-- Document PDFs may contain PII (names, emails, account numbers)
-- Tokenize or mask PII before vector encoding
-- Implement document-level access control
-
-```python
-# Mask PII before embedding
+# Mask sensitive data before embedding
 import re
 
-def mask_pii(text: str) -> str:
-    text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN]', text)  # SSN
-    text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', text)
+def sanitize_for_embedding(text: str) -> str:
+    """Remove PII before creating vectors"""
+    # Mask SSN
+    text = re.sub(r'\d{3}-\d{2}-\d{4}', '[SSN]', text)
+    # Mask email  
+    text = re.sub(r'\S+@\S+\.\S+', '[EMAIL]', text)
+    # Mask phone
+    text = re.sub(r'\+?1?\W?\d{3}\W?\d{3}\W?\d{4}', '[PHONE]', text)
     return text
 ```
+
+### 3. Compliance Frameworks
+
+#### GDPR (General Data Protection Regulation)
+
+For EU users, implement these mandatory features:
+
+**Right to Erasure** (Article 17):
+```python
+@router.delete("/users/{user_id}/data")
+async def delete_user_data(user_id: str, token = Security(verify_firebase_token)):
+    """Permanently delete user data including vectors"""
+    if token.get("uid") != user_id:
+        raise HTTPException(status_code=403)
+    
+    # Delete all user documents
+    db.session.query(Document).filter(Document.user_id == user_id).delete()
+    
+    # Delete embeddings from vector DB
+    vector_db.delete_embeddings(user_id=user_id)
+    
+    # Log for audit trail
+    audit_log("GDPR_RIGHT_TO_ERASURE", user_id=user_id)
+    db.session.commit()
+    return {"status": "success", "message": "All user data deleted"}
+```
+
+**Data Portability** (Article 20):
+```python
+@router.get("/users/{user_id}/export")
+async def export_user_data(user_id: str, token = Security(verify_firebase_token)):
+    """Export all user data in machine-readable format"""
+    if token.get("uid") != user_id:
+        raise HTTPException(status_code=403)
+    
+    docs = db.session.query(Document).filter(Document.user_id == user_id).all()
+    data = {
+        "user_id": user_id,
+        "export_date": datetime.now().isoformat(),
+        "documents": [
+            {
+                "id": doc.id,
+                "filename": doc.filename,
+                "created_at": doc.created_at.isoformat(),
+                "content": doc.extracted_text
+            }
+            for doc in docs
+        ]
+    }
+    return JSONResponse(content=data)
+```
+
+**Data Processing Agreement**: Ensure DPA with Firebase and external API providers (Groq, Huggingface)
+
+#### SOC 2 Type II
+- **Availability** (C): 99.95% uptime SLA, monitoring + alerting
+- **Security** (S1): Encryption, access controls, vulnerability scanning
+- **Processing Integrity** (P): Checksums, audit logs, error handling
+- **Confidentiality** (C2): RBAC, field-level encryption, data minimization
+- **Privacy** (P2): Minimal PII collection, retention policies, user consent
+
+**Implementation**:
+```python
+# Audit logging for SOC 2 compliance
+from datetime import datetime
+
+def log_audit_event(event: str, user_id: str, details: dict = None):
+    """Log security-relevant events for compliance audit trails"""
+    audit_entry = AuditLog(
+        event_type=event,
+        user_id=user_id,
+        timestamp=datetime.utcnow(),
+        ip_address=request.client.host,
+        details=details or {}
+    )
+    db.session.add(audit_entry)
+    db.session.commit()
+
+# Usage
+log_audit_event("LOGIN", user_id="user123")
+log_audit_event("DOCUMENT_UPLOADED", user_id="user123", details={"document_id": "doc456"})
+log_audit_event("API_CALL", user_id="user123", details={"endpoint": "/ask", "status": 200})
+```
+
+#### PCI DSS (if handling payment data)
+- ✅ No credit card storage (use Stripe/payment processor instead)
+- ✅ HTTPS/TLS for all transmission
+- ✅ No sensitive authentication data in logs
 
 ---
 
@@ -190,14 +346,57 @@ def mask_pii(text: str) -> str:
 
 ### Role-Based Access Control (RBAC)
 
-```python
-# backend/app/core/permissions.py
-from enum import Enum
-from typing import List
+Firebase provides custom claims for role management:
 
-class Role(str, Enum):
-    ADMIN = "admin"
-    ANALYST = "analyst"
+```python
+# Set custom claims in Firebase (via Firebase Console or Admin SDK)
+claims = {
+    "role": "analyst",
+    "organization": "org_123",
+    "permissions": ["read", "upload", "analyze"]
+}
+auth.set_custom_user_claims("user_id", claims)
+
+# Backend: Verify roles
+async def require_role(required_role: str):
+    async def role_checker(token = Security(verify_firebase_token)):
+        user_role = token.get("custom_claims", {}).get("role")
+        if user_role != required_role:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return token
+    return role_checker
+
+# Protected endpoint
+@router.delete("/documents/{doc_id}")
+async def delete_document(
+    doc_id: str,
+    token = Security(require_role("admin"))
+):
+    # Only admins can delete documents
+    db.session.query(Document).filter(Document.id == doc_id).delete()
+    return {"status": "deleted"}
+```
+
+### Scoping & Multi-Tenancy
+
+For future multi-tenant deployments:
+
+```python
+class TenantScope:
+    """Enforce user can only access their own organization's data"""
+    
+    @staticmethod
+    def filter_documents(user_token: dict) -> list:
+        user_org = user_token.get("custom_claims", {}).get("organization")
+        return db.session.query(Document).filter(
+            Document.organization_id == user_org
+        ).all()
+
+# Usage
+@router.get("/documents")
+async def list_documents(token = Security(verify_firebase_token)):
+    return TenantScope.filter_documents(token)
+```
     VIEWER = "viewer"
 
 class Permission(str, Enum):

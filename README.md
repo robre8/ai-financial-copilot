@@ -8,6 +8,31 @@ Upload PDFs → Ask questions → Get AI-powered insights powered by Groq LLMs, 
 
 **🚀 [Try Live Demo](https://ai-financial-copilot-preview.vercel.app/)** | **📡 [API Docs](https://ai-financial-copilot-3.onrender.com/docs)** | **📖 [Enterprise Guide](./ENTERPRISE.md)**
 
+---
+
+## 🔀 Git Workflow & Branching Strategy
+
+```
+main (production)
+  ├── Stable, production-ready code
+  ├── Tagged releases
+  └── Deployed to: https://ai-financial-copilot-3.onrender.com
+       ↑ (merges from feature branches)
+
+feature/improvements (development)
+  ├── Active development branch
+  ├── Preview builds on every push
+  └── Deployed to: https://ai-financial-copilot-preview.vercel.app (Vercel preview)
+```
+
+**Workflow**:
+1. **Development**: All features on `feature/improvements` branch
+2. **Preview**: Vercel automatically builds & deploys preview on every push
+3. **Production**: Cherry-pick tested features to `main` when stable
+4. **Releases**: Tag `main` with semantic versions (v1.0.0, v1.1.0, etc.)
+
+**For Contributors**: Submit PRs against `feature/improvements` branch
+
 ## ✨ Key Features
 
 | Feature | Details |
@@ -202,41 +227,83 @@ For detailed setup instructions, see [SECURITY_AUTHENTICATION_GUIDE.md](./SECURI
 
 ```
 ai-financial-copilot/
-├── backend/                          # FastAPI server
+├── main                               # Production branch (stable, released)
+├── feature/improvements               # Development branch (preview on Vercel)
+│
+├── backend/                           # FastAPI microservice (Python 3.11)
 │   ├── app/
-│   │   ├── api/routes.py             # REST endpoints
+│   │   ├── main.py                   # FastAPI app initialization
+│   │   ├── models.py                 # SQLAlchemy ORM models
+│   │   ├── database.py               # PostgreSQL connection & session factory
+│   │   ├── api/
+│   │   │   └── routes.py             # REST endpoints (/upload, /ask, /analyze, etc)
 │   │   ├── services/
-│   │   │   ├── vector_service.py     # PostgreSQL + pgvector
-│   │   │   ├── llm_service.py        # Groq LLM with retry logic
-│   │   │   ├── embedding_service.py  # Huggingface embeddings
-│   │   │   ├── rag_service.py        # RAG orchestration
-│   │   │   └── agent_service.py      # Future: AI agents
+│   │   │   ├── vector_service.py     # pgvector operations (semantic search)
+│   │   │   ├── llm_service.py        # Groq LLM with 3-model fallback & retry logic
+│   │   │   ├── embedding_service.py  # Huggingface embeddings (all-MiniLM-L6-v2)
+│   │   │   ├── pdf_service.py        # PDF extraction & text splitting
+│   │   │   ├── rag_service.py        # RAG orchestration (upload → search → generate)
+│   │   │   └── agent_service.py      # ReAct financial analysis agent
 │   │   ├── core/
-│   │   │   ├── config.py             # Settings (+ Firebase config)
-│   │   │   ├── security.py           # Firebase JWT validation
-│   │   │   └── rate_limit.py         # Rate limiting
-│   │   ├── models.py                 # SQLAlchemy models
-│   │   ├── database.py               # DB connection
-│   │   └── utils/text_splitter.py    # Chunking
-│   ├── requirements.txt              # Python dependencies (+ firebase-admin)
-│   └── Dockerfile
-├── ai-copilot-frontend/              # React app
+│   │   │   ├── config.py             # Settings & environment variables
+│   │   │   ├── security.py           # Firebase JWT authentication & authorization
+│   │   │   ├── logger.py             # Structured logging
+│   │   │   └── rate_limit.py         # Per-user rate limiting (10 req/min default)
+│   │   ├── schemas/
+│   │   │   └── rag_schema.py         # Pydantic request/response models
+│   │   └── utils/
+│   │       └── text_splitter.py      # Document chunking (512 tokens per chunk)
+│   ├── requirements.txt              # Python dependencies (FastAPI, SQLAlchemy, firebase-admin, etc)
+│   ├── Dockerfile                    # Container image for backend
+│   ├── vector.index                  # FAISS index (if used locally)
+│   └── texts.json                    # Sample documents for testing
+│
+├── ai-copilot-frontend/              # React 18 + Vite frontend
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── ChatInterface.tsx     # Main chat UI
-│   │   ├── App.tsx                   # Root component
-│   │   ├── main.tsx                  # App entrypoint
-│   │   └── index.css                 # Global styles
-│   ├── package.json                  # Dependencies
-│   └── vite.config.ts
-├── tests/
-│   ├── test_api.py                   # Unit tests
-│   └── test_integration.py           # Integration tests
-├── docker-compose.yml                # PostgreSQL + Backend
-├── init-db.sql                       # Database initialization
-├── POSTGRESQL_SETUP.md               # Database setup guide
-└── ENTERPRISE.md                     # Enterprise guide
+│   │   │   └── ChatInterface.tsx     # Main chat & PDF upload UI
+│   │   ├── App.tsx                   # Root React component
+│   │   ├── main.tsx                  # Vite app entrypoint
+│   │   ├── index.css                 # Tailwind CSS + globals
+│   │   └── vite-env.d.ts             # TypeScript Vite env types
+│   ├── package.json                  # Dependencies (React, Tailwind, Firebase SDK, etc)
+│   ├── vite.config.ts                # Vite bundler configuration
+│   ├── tsconfig.json                 # TypeScript configuration
+│   └── Dockerfile                    # Container image for frontend
+│
+├── tests/                            # Comprehensive test suite (50+ tests)
+│   ├── conftest.py                   # Pytest fixtures (Firebase mock, DB session, etc)
+│   ├── test_api.py                   # Endpoint unit tests
+│   ├── test_agent.py                 # Financial agent tests (/analyze, /webhooks)
+│   ├── test_integration.py           # Full RAG pipeline integration tests
+│   ├── test_security.py              # Firebase auth & authorization tests
+│   └── test_rag.py                   # RAG service unit tests
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # GitHub Actions pipeline (test, build, deploy)
+│
+├── docker-compose.yml                # Local dev: PostgreSQL 15 + backend + pgvector
+├── init-db.sql                       # Database initialization script
+├── Dockerfile                        # (root) Main backend Dockerfile
+│
+├── README.md                         # ← You are here
+├── ENTERPRISE.md                     # Production deployment & compliance guide
+├── SECURITY_AUTHENTICATION_GUIDE.md  # Firebase setup & JWT validation
+├── SECURITY_ACTIVATION_STEPS.md      # Step-by-step security configuration
+├── SECURITY_VALIDATION_GUIDE.md      # Testing security features
+├── SECURITY_FIX_CHECKLIST.md         # Security hardening checklist
+│
+└── README files
+    ├── pytest.ini                    # Pytest configuration
+    └── conftest.py                   # Root-level pytest setup
 ```
+
+**Key Directories**:
+- **backend/**: FastAPI REST API with PostgreSQL + pgvector
+- **ai-copilot-frontend/**: React SPA with Tailwind CSS, Firebase Auth
+- **tests/**: Unit & integration tests (auto-run on GitHub Actions)
+- **.github/workflows/**: CI/CD pipeline definitions
 
 ## 🏗️ How It Works
 
